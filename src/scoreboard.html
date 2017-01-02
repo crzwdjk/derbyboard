@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <title></title>
+  <meta name="viewport"
+        content="height = device-height, width = device-width,
+                 initial-scale = 1.0, minimum-scale = 1.0, maximum-scale = 1.0,
+                 user-scalable = no, target-densitydpi = device-dpi">
+  <style>
+    body {
+      font-weight: bold,
+      font-family: 'LiberationSans',helvetica,sans;
+      text-align: center;
+    color: white;
+    background: black;
+    }
+    .teamscore {
+      font-size: 20px;
+      position: absolute;
+    }
+    #topdiv, #bottomdiv {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      background: black;
+    }
+    .teambox {
+      flex: 1;
+    }
+    .scorebox {
+       display: flex;
+       flex-direction: row;
+    }
+    .jamscore {
+      background: cyan;
+      flex: 4;
+      height: 1%;
+      font-size: 40px;
+       align-self: center;
+     }
+    .score {
+      background: magenta;
+      font-size: 200px;
+      flex: 10;
+    }
+    .tobar {
+      flex: 1;
+    }
+    #periodbox, #jambox {
+      flex: 1;
+      
+    }
+  </style>
+</head>
+<body>
+  <div id="topdiv">
+    <div id="team1" class="teambox">
+      <div class="teamname">Team 1</div>
+      <div class="scorebox">
+        <div class="tobar">
+          <div class="tos">
+          </div>
+        </div>
+        <div class="score" id="totalscore1">0</div>
+        <div class="jamscore" id="jamscore1">0</div>
+      </div>
+      <div class="jammer">Jammer 1</div>
+    </div>
+    <div id="team2" class="teambox">
+      <div class="teamname">Team 2</div>
+      <div class="scorebox">
+        <div class="jamscore" id="jamscore2">0</div>
+        <div class="score" id="totalscore2">0</div>
+        <div class="tobar"></div>
+      </div>
+      <div class="jammer">Jammer 2</div>
+    </div>
+  </div>
+  <div id="bottomdiv">
+    <div id="periodbox">
+      <div id="ptlabel">Period 0</div>
+      <div id="periodtime">30:00</div>
+    </div>
+    <div id="jambox">
+      <div id="jtlabel">Jam 0</div>
+      <div id="jamtime">2:00</div>
+    </div>
+  </div>
+  <script src="scoreboard.js"></script>
+</body>
+</html>

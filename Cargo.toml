@@ -1,0 +1,13 @@
+[package]
+name = "derbyboard"
+version = "0.1.0"
+authors = ["Teapotahedron <teapot@teapotahedron.com>"]
+
+[dependencies]
+rocket = "0.1.0"
+rocket_codegen = "0.1.0"
+rocket_contrib = "*"
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+lazy_static = "*"
