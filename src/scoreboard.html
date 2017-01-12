@@ -8,15 +8,11 @@
                  user-scalable = no, target-densitydpi = device-dpi">
   <style>
     body {
-      font-weight: bold,
+      font-weight: bold;
       font-family: 'LiberationSans',helvetica,sans;
       text-align: center;
-    color: white;
-    background: black;
-    }
-    .teamscore {
-      font-size: 20px;
-      position: absolute;
+      color: white;
+      background: black;
     }
     #topdiv, #bottomdiv {
       width: 100%;
@@ -36,20 +32,63 @@
       flex: 4;
       height: 1%;
       font-size: 40px;
-       align-self: center;
-     }
+      align-self: center;
+    }
     .score {
       background: magenta;
-      font-size: 200px;
+      font-size: 15vw;
       flex: 10;
+    }
+    #periodtime, #jamtime {
+      font-size: 15vw;
+      background: darkgreen;
+    }
+    #lutime {
+      font-size: 15vw;
+      background: darkred;
     }
     .tobar {
       flex: 1;
+      display: flex;
+      flex-direction: column;
     }
-    #periodbox, #jambox {
+    #periodbox, #jambox, #lubox {
       flex: 1;
-      
     }
+    .tobox {
+      background: red;
+      flex: 3;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+    }
+    .orbox {
+      background: blue;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+
+    }
+    .dot {
+      background: #000000;
+      width: 3vw;
+      height: 3vw;
+      border-radius: 100%;
+    }
+
+    .dot.blinking {
+      animation: blinker 0.75s infinite alternate;
+      -moz-animation: blinker 0.75s infinite alternate;
+      -webkit-animation: blinker 0.75s infinite alternate;
+    }
+    .dot.hidden {
+      opacity: 0;
+    }
+    @keyframes blinker { to { opacity: 0; } }
+    @-moz-keyframes blinker { to { opacity: 0; } }
+    @-webkit-keyframes blinker { to { opacity: 0; } }
+
   </style>
 </head>
 <body>
@@ -58,7 +97,13 @@
       <div class="teamname">Team 1</div>
       <div class="scorebox">
         <div class="tobar">
-          <div class="tos">
+          <div class="tobox">
+            <div class="dot" id="to1-1"></div>
+            <div class="dot" id="to1-2"></div>
+            <div class="dot" id="to1-3"></div>
+          </div>
+          <div class="orbox">
+            <div class="dot" id="or1"></div>
           </div>
         </div>
         <div class="score" id="totalscore1">0</div>
@@ -71,7 +116,16 @@
       <div class="scorebox">
         <div class="jamscore" id="jamscore2">0</div>
         <div class="score" id="totalscore2">0</div>
-        <div class="tobar"></div>
+        <div class="tobar">
+          <div class="tobox">
+            <div class="dot" id="to2-1"></div>
+            <div class="dot" id="to2-2"></div>
+            <div class="dot" id="to2-3"></div>
+          </div>
+          <div class="orbox">
+            <div class="dot" id="or2"></div>
+          </div>
+        </div>
       </div>
       <div class="jammer">Jammer 2</div>
     </div>
@@ -84,6 +138,10 @@
     <div id="jambox">
       <div id="jtlabel">Jam 0</div>
       <div id="jamtime">2:00</div>
+    </div>
+    <div id="lubox" hidden="true">
+      <div id="lulabel"></div>
+      <div id="lutime"></div>
     </div>
   </div>
   <script src="scoreboard.js"></script>

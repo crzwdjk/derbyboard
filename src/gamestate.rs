@@ -30,6 +30,7 @@ struct TeamJamState {
 
 use std::cmp::max;
 use std::time::*;
+use clock;
 
 impl TeamJamState {
     fn update_points(&mut self, adj: i8) {
@@ -52,22 +53,47 @@ struct JamState {
     endtime: Option<Instant>,
 }
 
-pub struct GameState {
-    team1: u32,
-    team2: u32,
-    timeouts_left: [u8; 2],
-    ors: [u8; 2],
-    gameclock: (u8, Duration),
-    clock_running: bool,
-    jams: Vec<JamState>,
-    last_update: Instant,
-    timeouts: Vec<(TimeoutKind, Duration)>,
+struct TeamState {
+    timeouts: u8,
+    reviews: u8,
 }
 
-enum TimeoutKind {
+pub struct GameState {
+    team1: TeamState,
+    team2: TeamState,
+    clock: clock::Clock,
+    jams: Vec<JamState>,
+}
+
+#[derive(Clone,Copy)]
+pub enum TimeoutKind {
     Official,
     Team(u8),
     Review(u8),
+}
+
+impl TimeoutKind {
+    pub fn from_str(s: &str) -> Option<TimeoutKind> {
+        match s {
+            "official" => Some(TimeoutKind::Official),
+            "team 1" => Some(TimeoutKind::Team(0)),
+            "team 2" => Some(TimeoutKind::Team(1)),
+            "or 1" => Some(TimeoutKind::Review(0)),
+            "or 2" => Some(TimeoutKind::Review(1)),
+            _ => None
+        }
+    }
+}
+
+pub enum ClockKind {
+    TeamTimeout { team: u8, which: u8 },
+    OfficialReview {team: u8 },
+    OfficialTimeout, Jam, Lineup, Intermission
+}
+
+pub struct JamTime {
+    pub clock: Duration,
+    pub kind: ClockKind,
 }
 
 use std::iter::Sum;
@@ -75,21 +101,14 @@ use std::iter::Sum;
 impl GameState {
     fn new(team1: u32, team2: u32) -> GameState {
         let firstjam = JamState::default();
-        return GameState { team1: team1, team2: team2, jams: vec![firstjam],
-                           ors: [2, 2], timeouts: [3, 3],
-                           gameclock: (1, Duration::new(30*60, 0)),
-                           last_update: Instant::now(), clock_running: false,
-        };
+        let team1 = TeamState { timeouts: 3, reviews: 2 };
+        let team2 = TeamState { timeouts: 3, reviews: 2 };
+        GameState { jams: vec![firstjam], team1: team1, team2: team2,
+                    clock: clock::Clock::new(),
+        }
     }
     pub fn new_jam(&mut self) {
         self.jams.push(JamState::default())
-    }
-    pub fn timeout(&mut self, kind: TimeoutKind) {
-        // stop jam, if one is going
-        // start timeout clock if not running
-        // if running and type is Official, reset clock
-        // if type is Team or Review, decrement team's count
-        
     }
     pub fn total_score(&self) -> (u32, u32) {
         let mut sums = (0, 0);
@@ -103,23 +122,32 @@ impl GameState {
         }
         sums
     }
+
     pub fn start_jam(&mut self) {
-        self.clock_running = true;
-        let jam = self.jams.last_mut().unwrap();
-        if let None = jam.starttime {
-            jam.starttime = Some(Instant::now());
-        }
+        self.clock.start_jam();
+        self.jams.last_mut().unwrap().starttime = Some(Instant::now());
     }
     pub fn stop_jam(&mut self) {
-        {
-            let jam = self.jams.last_mut().unwrap();
-            if let None = jam.endtime {
-                jam.endtime = Some(Instant::now());
-            }
-        }
+        self.clock.stop_jam();
+        self.jams.last_mut().unwrap().endtime = Some(Instant::now());
         self.jams.push(JamState::default());
     }
-        
+    pub fn get_time(&self) -> (u8, Duration) {
+        self.clock.get_time()
+    }
+    pub fn get_active_clock(&self) -> JamTime {
+        let (ty, duration) = self.clock.get_active_clock();
+        let kind = match ty {
+            clock::Clocktype::Jam => ClockKind::Jam,
+            clock::Clocktype::Lineup => ClockKind::Lineup,
+            clock::Clocktype::Intermission => ClockKind::Intermission,
+            _ => unimplemented!() // TODO: handle TO/OR
+        };
+        JamTime { clock: duration, kind: kind }
+    }
+
+    pub fn timeout(&mut self, kind: TimeoutKind) { unimplemented!() }
+
     pub fn jam_score(&self) -> (u32, u32) {
         if let Some(jam) = self.jams.last() {
             let p1j = jam.team1.points_j.iter().sum::<u8>();
@@ -137,41 +165,19 @@ impl GameState {
             jam.team2.update_points(t2adj);
         }
     }
-    pub fn get_time(&self) -> (u8, Duration) {
-        self.gameclock
-    }
-    pub fn get_jam_time(&self) -> (u8, Duration) {
-        let jam = self.jams.last().unwrap();
-        let time = match jam.starttime {
-            None => Duration::new(120, 0),
-            Some(starttime) => match jam.endtime {
-                None => Instant::now() - starttime,
-                Some(endtime) => Duration::new(0,0),
-            }
-        };
-        (self.jams.len() as u8, time)
-    }
+
     pub fn tick(&mut self) -> () {
-        let now = Instant::now();
-        if self.clock_running {
-            let decrement = now - self.last_update;
-            if self.gameclock.1 >= decrement {
-                self.gameclock.1 -= decrement;
-            } else {
-                self.gameclock.1 = Duration::new(0,0);
-                // TODO: end period
-            }
-        } else {
-            // TODO: handle timeout
-        }
-            
-        self.last_update = now;
+        self.clock.tick();
+    }
+    pub fn jamnum(&self) -> u8 {
+        // TODO: period handling
+        return self.jams.len() as u8;
     }
 }
 
 pub fn start_game(team1: u32, team2: u32) -> () {
     match CUR_GAME {
-        None => unsafe { 
+        None => unsafe {
             let gp = &CUR_GAME as *const Option<Mutex<GameState>> as *mut Option<Mutex<GameState>>;
             *gp = Some(Mutex::new(GameState::new(team1, team2)));
         },
@@ -193,4 +199,3 @@ pub fn get_game<'a>() -> MutexGuard<'a, GameState> {
 use std::sync::{Mutex,MutexGuard};
 
 static CUR_GAME: Option<Mutex<GameState>> = None;
-

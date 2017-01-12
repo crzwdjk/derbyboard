@@ -24,9 +24,24 @@ function updateScore(data) {
     setInner('jamscore1', data.jamscore[0]);
     setInner('jamscore2', data.jamscore[1]);
     setInner('periodtime', format_time(data.gameclock[1].secs));
-    setInner('jamtime', format_time(data.jamclock[1].secs));
+    // if there's a lineup time, set lineup time
+    if (data.lineupclock) {
+        var lb = document.getElementById('lubox');
+        lb.hidden = false;
+        setInner('lulabel', 'Lineup');
+        setInner('lutime', format_time(data.lineupclock.secs));
+        var jb = document.getElementById('jambox');
+        jb.hidden = true;
+    } else {
+        var lb = document.getElementById('lubox');
+        lb.hidden = true;
+        var jb = document.getElementById('jambox');
+        jb.hidden = false;
+        setInner('jamtime', format_time(data.jamclock[1].secs));
+        setInner('jtlabel', "Jam " + data.jamclock[0]);
+    }
     setInner('ptlabel', "Period " + data.gameclock[0]);
-    setInner('jtlabel', "Jam " + data.jamclock[0]);
+    console.log(data);
 }
 
 function updater() {
@@ -62,6 +77,8 @@ function clickhandler(e) {
         || el.msRequestFullscreen;
     //rfs.call(el);
 }
+
+
 function keyhandler(e) {
     switch (e.key) {
     case "q":
@@ -81,6 +98,9 @@ function keyhandler(e) {
         break;
     case " ":
         send_command({start_jam: false });
+        break;
+    case "t":
+        send_command({start_timeout: "official" });
         break;
     }
 }

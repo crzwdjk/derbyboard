@@ -1,14 +1,3 @@
-
-/*
-fn hello_world<'mw>(_req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw> {
-    let mut body = match res.start() { Ok(o) => o, Err(e) => panic!() };
-    body.write_fmt(format_args!("foo\n"));
-    body.flush();
-    std::thread::sleep(Duration::new(5,0));
-    body.write_fmt(format_args!("bar\n"));
-    Ok(Action::Halt(body))
-}
- */
 #![feature(plugin, proc_macro)]
 #![plugin(rocket_codegen)]
 
@@ -25,6 +14,7 @@ use std::thread;
 use std::time::Duration;
 
 mod gamestate;
+mod clock;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -39,8 +29,8 @@ fn new_game() -> Redirect {
 
 #[get("/game")]
 fn show_game() -> &'static str {
-    "a game"
-}
+                "a game"
+            }
 
 #[get("/game/<gameid>/penalties")]
 fn penalty_board(gameid: usize) -> &'static str {
@@ -58,14 +48,25 @@ struct ScoreUpdate {
     jamscore: (u32, u32),
     gameclock: (u8, Duration),
     jamclock: (u8, Duration),
+    lineupclock: Option<Duration>,
 }
 
 #[get("/score/update")]
 fn scoreupdate() -> JSON<ScoreUpdate> {
     let game = gamestate::get_game();
+    let activeclock = game.get_active_clock();
+    let mut lineupclock = None;
+    let mut jamclock = (game.jamnum(), Duration::new(120, 0));
+    match activeclock.kind {
+        gamestate::ClockKind::Jam => jamclock.1 = activeclock.clock,
+        gamestate::ClockKind::Lineup => lineupclock = Some(activeclock.clock),
+        _ => (),
+    };
+
     JSON(ScoreUpdate {
         score: game.total_score(), jamscore: game.jam_score(),
-        gameclock: game.get_time(), jamclock: game.get_jam_time(),
+        gameclock: game.get_time(), jamclock: jamclock,
+        lineupclock: lineupclock,
     })
 }
 
@@ -74,6 +75,7 @@ struct UpdateCommand {
     score_adj: Option<[i8; 2]>,
     score_set: Option<[i8; 2]>,
     start_jam: Option<bool>,
+    start_timeout: Option<String>,
 }
 
 #[post("/score/update", format = "application/json", data = "<cmd>")]
@@ -82,7 +84,6 @@ fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
     let mut game = gamestate::get_game();
     if let Some(adj) = cmd.0.score_adj {
         game.adj_score(adj[0], adj[1]);
-        "success"
     } else if let Some(start) = cmd.0.start_jam {
         if start {
             println!("Jam On!");
@@ -91,10 +92,14 @@ fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
             println!("Jam Off!");
             game.stop_jam();
         }
-        "success"
-    } else {
-        "error"
     }
+    if let Some(to_command) = cmd.0.start_timeout {
+        let tokind = gamestate::TimeoutKind::from_str(&to_command);
+        if let Some(kind) = tokind {
+            game.timeout(kind);
+        }
+    }
+    "success"
 }
 
 #[get("/scoreboard.js")]
@@ -110,7 +115,6 @@ fn main() {
             gamestate::get_game().tick();
         }
     });
-    println!("{:?}", vec![1, 2, 3, 4]);
     rocket::ignite().mount("/", routes![index, show_game, penalty_board,
                                         scoreboard, scoreboardjs, new_game,
                                         scoreupdate, post_score]).launch();
