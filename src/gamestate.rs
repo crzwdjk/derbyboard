@@ -1,22 +1,7 @@
-pub enum PenaltyCode {
-    BackBlock,
-    LowBlock,
-    HighBlock,
-    Forearms,
-    Elbows,
-    BlockWithHead,
-    MultiPlayer,
-    Directional,
-    CutTrack,
-    IllegalProcedure,
-    OutOfPlay,
-    OutOfBounds,
-    SkatingOutOfBounds,
-    Insubordination,
-    Misconduct,
-    DelayOfGame,
-    Unknown,
-}
+use std::collections::HashMap;
+use std::iter::FromIterator;
+
+use penaltycodes::*;
 
 #[derive(Default)]
 struct TeamJamState {
