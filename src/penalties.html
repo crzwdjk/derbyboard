@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+  <title>Whiteboard</title>
+  <style>
+    body {
+      font-family: 'LiberationSans',helvetica,sans;
+      display: flex;
+      flex-flow: row wrap;
+    }
+    #team1name, #team2name {
+      background: #ffe8ff;
+      font-size: 1.5em;
+      text-align: center;
+    }
+    table, td, th, tr {
+      border: 1px solid black;
+    }
+    th {
+      background: black;
+      color: white;
+      font-size: 0.7em;
+    }
+    table#team1penalties, table#team2penalties {
+      border-collapse: collapse;
+      display: inline-block;
+    }
+    tr:nth-child(4n+1) td.penalty, tr:nth-child(4n+1) td.total,
+    tr:nth-child(4n+2) td.penalty, tr:nth-child(4n+2) td.total {
+      background: #ffe8ff;
+    }
+    td.total {
+      width: 3em;
+    }
+    td.seventh {
+      border-left: 2px solid black;
+    }
+    td.rosternum {
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+    tr:nth-child(4n+1) td.rosternum {
+      background: #ffd0ff;
+    }
+    tr:nth-child(4n+3) td.rosternum {
+      background: #ffe8ff;
+    }
+    td.fo {
+      background: #ffd0ff;
+      width: 3em;
+    }
+    .penalty {
+      width: 2em;
+      height: 1.5em;
+    }
+    tr:focus td, tr:focus td.penalty, tr:focus td.total, tr:focus td.rosternum {
+      background: yellow !important;
+    }
+    tr:focus + tr td.penalty, tr:focus + tr td {
+      background: yellow !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="team1name">Team 1</div>
+    <table id="team1penalties">
+      <thead>
+        <th>#</th>
+        <th colspan="9">PENALTY/JAM #</th>
+        <th>FO/EXP</th>
+        <th>TOTAL</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+  <div class="container">
+    <div id="team2name">Team 2</div>
+    <table id="team2penalties">
+      <thead>
+        <th>#</th>
+        <th colspan="9">PENALTY/JAM #</th>
+        <th>FO/EXP</th>
+        <th>TOTAL</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+  <template id="penaltyrow">
+    <tr tabindex="2">
+      <td class="rosternum" rowspan="2"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty seventh"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="fo"></td>
+      <td class="total" rowspan="2"></td>
+    </tr>
+    <tr>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="penalty seventh"></td>
+      <td class="penalty"></td>
+      <td class="penalty"></td>
+      <td class="fo"></td>
+    </tr>
+  </template>
+  <script src="penalties.js"></script>
+</body>
+</html>

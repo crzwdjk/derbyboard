@@ -6,35 +6,46 @@ extern crate serde_json;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
+extern crate serde;
 
 use rocket::response::*;
 use rocket_contrib::JSON;
 
+use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
+use std::ffi::OsStr;
 
 mod gamestate;
 mod clock;
+mod roster;
+mod penaltycodes;
 
+use gamestate::Penalty;
 #[get("/")]
 fn index() -> &'static str {
     "Hello, world!"
 }
 
 
-#[post("/start_game")]
-fn new_game() -> Redirect {
-    Redirect::to("/game")
+#[get("/penalties")]
+fn penalties() -> content::HTML<&'static str> {
+    content::HTML(include_str!("penalties.html"))
 }
 
-#[get("/game")]
-fn show_game() -> &'static str {
-                "a game"
-            }
+#[derive(Deserialize)]
+struct PenaltyCmd {
+    skater: String,
+    code: char,
+}
 
-#[get("/game/<gameid>/penalties")]
-fn penalty_board(gameid: usize) -> &'static str {
-    "penalties"
+use std::time::*;
+
+#[post("/penalties/<team>", format = "application/json", data = "<cmd>")]
+fn add_penalty(team: u8, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
+    let mut game = gamestate::get_game_mut();
+    game.penalty(team, cmd.skater.as_str(), cmd.code);
+    JSON(game.team_penalties(team).unwrap())
 }
 
 #[get("/score")]
@@ -81,7 +92,7 @@ struct UpdateCommand {
 #[post("/score/update", format = "application/json", data = "<cmd>")]
 fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
 {
-    let mut game = gamestate::get_game();
+    let mut game = gamestate::get_game_mut();
     if let Some(adj) = cmd.0.score_adj {
         game.adj_score(adj[0], adj[1]);
     } else if let Some(start) = cmd.0.start_jam {
@@ -107,16 +118,30 @@ fn scoreboardjs() -> &'static str {
     include_str!("scoreboard.js")
 }
 
+#[get("/penalties.js")]
+fn penaltiesjs() -> &'static str {
+    include_str!("penalties.js")
+}
+
+
+#[get("/gameroster/<team>")]
+fn gameroster(team: u8) -> Option<JSON<roster::Team>> {
+    let game = gamestate::get_game();
+    game.get_team(team).map(|t| JSON(t.clone())) // ew. Why can't we serialize a ref?
+}
+
 fn main() {
-    gamestate::start_game(0, 1);
+    let rosters = roster::load_rosters(OsStr::new("rosters")).unwrap_or(Vec::new());
+    println!("Loaded {} rosters", rosters.len());
+    gamestate::start_game(&rosters[0], &rosters[1]);
     thread::spawn(move || {
         loop {
             thread::park_timeout(Duration::new(0, 100_000_000));
-            gamestate::get_game().tick();
+            gamestate::get_game_mut().tick();
         }
     });
-    rocket::ignite().mount("/", routes![index, show_game, penalty_board,
-                                        scoreboard, scoreboardjs, new_game,
-                                        scoreupdate, post_score]).launch();
-}
 
+    rocket::ignite().mount("/", routes![index, penalties, penaltiesjs, gameroster,
+                                        scoreboard, scoreboardjs,
+                                        scoreupdate, post_score, add_penalty]).launch();
+}

@@ -133,8 +133,9 @@ impl Clock {
             Clocktype::Jam | Clocktype::Lineup | Clocktype::OtherTimeout => {
                 self.start_clock(Clocktype::TeamTimeout, None);
             },
+            /* TODO: convert other timeout to a team timeout */
             Clocktype::Intermission | Clocktype::TeamTimeout => {
-                // can't start a team timeout
+                // can't start a team timeout 
             }
         }
     }
@@ -147,7 +148,7 @@ impl Clock {
             Clocktype::Jam | Clocktype::Lineup => {
                 self.start_clock(Clocktype::OtherTimeout, None);
             },
-            Clocktype::TeamTimeout => { /* convert to a team timeout */ },
+            Clocktype::TeamTimeout => { /* convert to an other timeout */ },
             Clocktype::Intermission | Clocktype::OtherTimeout =>  {
                 // can't start Other Timeout
             }

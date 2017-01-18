@@ -8,13 +8,14 @@ struct TeamJamState {
     lineup: [u32; 6],
     points_j: Vec<u8>,
     points_p: Vec<u8>,
-    penalties: Vec<(u32, PenaltyCode)>,
-    boxtrips: Vec<(u32, u32, u32)>,
+    penalties: Vec<(usize, PenaltyType)>,
     starpass: bool,
+    lead: bool,
 }
 
 use std::cmp::max;
 use std::time::*;
+use roster;
 use clock;
 
 impl TeamJamState {
@@ -41,6 +42,25 @@ struct JamState {
 struct TeamState {
     timeouts: u8,
     reviews: u8,
+    roster: roster::Team,
+}
+
+impl TeamState {
+    fn new(roster: &roster::Team) -> TeamState {
+        TeamState { timeouts: 3, reviews: 2, roster: roster.clone() }
+    }
+}
+
+#[derive(Serialize, Clone)]
+pub struct Penalty {
+    jam: u8,
+    code: PenaltyType,
+}
+
+#[derive(Serialize)]
+pub struct TeamPenalties {
+    team: u8,
+    penalties: HashMap<String, Vec<Penalty>>,
 }
 
 pub struct GameState {
@@ -84,10 +104,10 @@ pub struct JamTime {
 use std::iter::Sum;
 
 impl GameState {
-    fn new(team1: u32, team2: u32) -> GameState {
+    fn new(roster1: &roster::Team, roster2: &roster::Team) -> GameState {
         let firstjam = JamState::default();
-        let team1 = TeamState { timeouts: 3, reviews: 2 };
-        let team2 = TeamState { timeouts: 3, reviews: 2 };
+        let team1 = TeamState::new(roster1);
+        let team2 = TeamState::new(roster2);
         GameState { jams: vec![firstjam], team1: team1, team2: team2,
                     clock: clock::Clock::new(),
         }
@@ -158,29 +178,82 @@ impl GameState {
         // TODO: period handling
         return self.jams.len() as u8;
     }
+    pub fn get_team(&self, teamnum: u8) -> Option<&roster::Team> {
+        match teamnum {
+            1 => Some(&self.team1.roster),
+            2 => Some(&self.team2.roster),
+            _ => None,
+        }
+    }
+
+    pub fn team_penalties(&self, teamnum: u8) -> Option<HashMap<String, Vec<Penalty>>> {
+        let ref roster = match self.get_team(teamnum) {
+            None => return None, Some(t) => t }.skaters;
+        let nskaters = roster.len();
+        let mut penalties_by_skater = Vec::new();
+        penalties_by_skater.resize(nskaters, Vec::new());
+        for (jamnum, jam) in self.jams.iter().enumerate() {
+            let jampenalties = if teamnum == 1 {
+                &jam.team1.penalties
+            } else {
+                &jam.team2.penalties
+            };
+            for &(idx, code) in jampenalties {
+                penalties_by_skater[idx].push(Penalty {
+                    code: code, jam: (jamnum + 1) as u8
+                });
+            }
+        }
+
+        let z = roster.iter().map(|s| s.number.clone()).zip(penalties_by_skater.into_iter());
+        Some(HashMap::from_iter(z))
+    }
+
+    pub fn penalty(&mut self, teamnum: u8, skater: &str, code: char) {
+        let skater_idx = {
+            let team = match self.get_team(teamnum) { Some(t) => t, None => return };
+            match team.skaters.binary_search_by_key(&skater, |s| &*s.number) {
+                Ok(idx) => idx,
+                Err(_) => { println!("skater {} not found", skater); return }
+            }
+        };
+        let jam = self.jams.last_mut().unwrap();
+        let mut penalties = if teamnum == 1 { &mut jam.team1.penalties } else { &mut jam.team2.penalties };
+        penalties.push((skater_idx, PenaltyType::from_char(code)));
+        println!("got penalty {} for skater: {} at {} ", code, skater, skater_idx);
+    }
 }
 
-pub fn start_game(team1: u32, team2: u32) -> () {
+pub fn start_game(team1: &roster::Team, team2: &roster::Team) -> () {
     match CUR_GAME {
         None => unsafe {
-            let gp = &CUR_GAME as *const Option<Mutex<GameState>> as *mut Option<Mutex<GameState>>;
-            *gp = Some(Mutex::new(GameState::new(team1, team2)));
+            let gp = &CUR_GAME as *const Option<RwLock<GameState>> as *mut Option<RwLock<GameState>>;
+            *gp = Some(RwLock::new(GameState::new(team1, team2)));
         },
         Some(ref m) => {
-            let mut mg = m.lock().unwrap();
+            let mut mg = m.write().unwrap();
             *mg = GameState::new(team1, team2);
         }
     }
 }
 
-pub fn get_game<'a>() -> MutexGuard<'a, GameState> {
+pub fn get_game<'a>() -> RwLockReadGuard<'a, GameState> {
     if let Some(ref m) = CUR_GAME {
-        m.lock().unwrap()
+        m.read().unwrap()
     } else {
         panic!();
     }
 }
 
-use std::sync::{Mutex,MutexGuard};
+pub fn get_game_mut<'a>() -> RwLockWriteGuard<'a, GameState> {
+    if let Some(ref m) = CUR_GAME {
+        m.write().unwrap()
+    } else {
+        panic!();
+    }
+}
 
-static CUR_GAME: Option<Mutex<GameState>> = None;
+//use std::sync::{Mutex,MutexGuard};
+use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
+
+static CUR_GAME: Option<RwLock<GameState>> = None;
