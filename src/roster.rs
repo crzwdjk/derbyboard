@@ -2,7 +2,6 @@ use std::io::BufRead;
 use std::fs::read_dir;
 use std::ffi::OsStr;
 use std::io;
-use std::io::prelude::*;
 
 #[derive(Clone, Serialize)]
 pub struct Skater {

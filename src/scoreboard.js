@@ -32,9 +32,22 @@ function updateScore(data) {
         setInner('lutime', format_time(data.lineupclock.secs));
         var jb = document.getElementById('jambox');
         jb.hidden = true;
+        var tb = document.getElementById('totimebox');
+        tb.hidden = true;
+    } else if (data.timeout) {
+        var tb = document.getElementById('totimebox');
+        setInner('tolabel', 'Timeout');
+        setInner('totime', format_time(data.timeout.secs));
+        tb.hidden = false;
+        var jb = document.getElementById('jambox');
+        jb.hidden = true;
+        var lb = document.getElementById('lubox');
+        lb.hidden = true;
     } else {
         var lb = document.getElementById('lubox');
         lb.hidden = true;
+        var tb = document.getElementById('totimebox');
+        tb.hidden = true;
         var jb = document.getElementById('jambox');
         jb.hidden = false;
         setInner('jamtime', format_time(data.jamclock[1].secs));
@@ -94,13 +107,13 @@ function keyhandler(e) {
         send_command({score_adj: [0, -1]});
         break;
     case "b":
-        send_command({start_jam: true });
+        send_command({start_jam: null }); // TODO: start_jam with jam #
         break;
     case " ":
-        send_command({start_jam: false });
+        send_command({stop_jam: null }); // TODO: stop_jam with jam #
         break;
     case "t":
-        send_command({start_timeout: "official" });
+        send_command({official_timeout: null });
         break;
     }
 }

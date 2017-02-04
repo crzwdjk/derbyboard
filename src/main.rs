@@ -21,7 +21,7 @@ mod clock;
 mod roster;
 mod penaltycodes;
 
-use gamestate::Penalty;
+use gamestate::{Penalty,Team};
 #[get("/")]
 fn index() -> &'static str {
     "Hello, world!"
@@ -39,10 +39,8 @@ struct PenaltyCmd {
     code: char,
 }
 
-use std::time::*;
-
 #[post("/penalties/<team>", format = "application/json", data = "<cmd>")]
-fn add_penalty(team: u8, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
+fn add_penalty(team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
     let mut game = gamestate::get_game_mut();
     game.penalty(team, cmd.skater.as_str(), cmd.code);
     JSON(game.team_penalties(team).unwrap())
@@ -60,6 +58,7 @@ struct ScoreUpdate {
     gameclock: (u8, Duration),
     jamclock: (u8, Duration),
     lineupclock: Option<Duration>,
+    timeout: Option<Duration>,
 }
 
 #[get("/score/update")]
@@ -68,47 +67,53 @@ fn scoreupdate() -> JSON<ScoreUpdate> {
     let activeclock = game.get_active_clock();
     let mut lineupclock = None;
     let mut jamclock = (game.jamnum(), Duration::new(120, 0));
+    let mut timeout = None;
     match activeclock.kind {
         gamestate::ClockKind::Jam => jamclock.1 = activeclock.clock,
         gamestate::ClockKind::Lineup => lineupclock = Some(activeclock.clock),
+        gamestate::ClockKind::OfficialTimeout => timeout = Some(activeclock.clock),
         _ => (),
     };
 
     JSON(ScoreUpdate {
         score: game.total_score(), jamscore: game.jam_score(),
         gameclock: game.get_time(), jamclock: jamclock,
-        lineupclock: lineupclock,
+        lineupclock: lineupclock, timeout: timeout,
     })
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Deserialize)]
-struct UpdateCommand {
-    score_adj: Option<[i8; 2]>,
-    score_set: Option<[i8; 2]>,
-    start_jam: Option<bool>,
-    start_timeout: Option<String>,
+enum UpdateCommand {
+    score_adj(i8, i8),
+    score_set(i8, i8),
+    start_jam,
+    stop_jam,
+    team_timeout(Team),
+    official_timeout,
 }
 
 #[post("/score/update", format = "application/json", data = "<cmd>")]
 fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
 {
     let mut game = gamestate::get_game_mut();
-    if let Some(adj) = cmd.0.score_adj {
-        game.adj_score(adj[0], adj[1]);
-    } else if let Some(start) = cmd.0.start_jam {
-        if start {
+    match cmd.0 {
+        UpdateCommand::score_adj(a1, a2) => game.adj_score(a1, a2),
+        UpdateCommand::start_jam => {
             println!("Jam On!");
             game.start_jam();
-        } else {
+        },
+        UpdateCommand::stop_jam => {
             println!("Jam Off!");
             game.stop_jam();
+        },
+        UpdateCommand::official_timeout => {
+            game.official_timeout();
+        },
+        UpdateCommand::team_timeout(team) => {
+            game.team_timeout(team);
         }
-    }
-    if let Some(to_command) = cmd.0.start_timeout {
-        let tokind = gamestate::TimeoutKind::from_str(&to_command);
-        if let Some(kind) = tokind {
-            game.timeout(kind);
-        }
+        _ => { /* XXX */ }
     }
     "success"
 }
@@ -125,9 +130,10 @@ fn penaltiesjs() -> &'static str {
 
 
 #[get("/gameroster/<team>")]
-fn gameroster(team: u8) -> Option<JSON<roster::Team>> {
+fn gameroster(team: Team) -> JSON<roster::Team> {
     let game = gamestate::get_game();
-    game.get_team(team).map(|t| JSON(t.clone())) // ew. Why can't we serialize a ref?
+    let skaters = game.roster(team);
+    JSON(skaters.clone()) // ew. Why can't we serialize a ref?
 }
 
 fn main() {

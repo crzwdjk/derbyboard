@@ -2,7 +2,7 @@
 
 use std::time::{Instant, Duration};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Clocktype {
     Jam,
     Lineup,
@@ -78,9 +78,10 @@ impl Clock {
     }
 
     // Jam -> Lineup, Lineup -> Jam, TeamTimeout -> Lineup
-    pub fn tick(&mut self) -> () {
+    pub fn tick(&mut self) -> bool {
         let now = Instant::now();
         let decrement = now - self.lastupdate;
+        let oldclocktype = self.clocktype;
 
         if self.clocktype.counts_down() {
             if self.activeclock > decrement {
@@ -107,6 +108,7 @@ impl Clock {
         }
 
         self.lastupdate = now;
+        return self.clocktype != oldclocktype;
     }
 
     // Valid when clock is any but Jam.
@@ -127,23 +129,17 @@ impl Clock {
 
     // {Jam, Lineup, OtherTimeout} -> TeamTimeout
     pub fn team_timeout(&mut self) -> () {
-        self.tick();
-
         match self.clocktype {
             Clocktype::Jam | Clocktype::Lineup | Clocktype::OtherTimeout => {
                 self.start_clock(Clocktype::TeamTimeout, None);
             },
-            /* TODO: convert other timeout to a team timeout */
-            Clocktype::Intermission | Clocktype::TeamTimeout => {
-                // can't start a team timeout 
-            }
+            // can't start a team timeout 
+            Clocktype::Intermission | Clocktype::TeamTimeout => (),
         }
     }
 
     // {Jam, Lineup} -> OtherTimeout
     pub fn other_timeout(&mut self) -> () {
-        self.tick();
-
         match self.clocktype {
             Clocktype::Jam | Clocktype::Lineup => {
                 self.start_clock(Clocktype::OtherTimeout, None);
@@ -158,8 +154,6 @@ impl Clock {
     // pub fn end_timeout(&mut self) -> ActiveClock {}
     // Jam -> Lineup
     pub fn stop_jam(&mut self) -> () {
-        self.tick();
-
         match self.clocktype {
             Clocktype::Jam => {
                 self.start_clock(Clocktype::Lineup, None);
