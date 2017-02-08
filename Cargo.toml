@@ -4,10 +4,10 @@ version = "0.1.0"
 authors = ["Teapotahedron <teapot@teapotahedron.com>"]
 
 [dependencies]
-rocket = "0.1.0"
-rocket_codegen = "0.1.0"
-rocket_contrib = "*"
-serde = "*"
-serde_json = "*"
-serde_derive = "*"
+rocket = "0.2.0"
+rocket_codegen = "0.2.0"
+rocket_contrib = "0.2.0"
+serde = "^0.9"
+serde_json = "^0.9.3"
+serde_derive = "^0.9"
 lazy_static = "*"

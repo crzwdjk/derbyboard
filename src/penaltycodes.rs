@@ -67,8 +67,8 @@ impl PenaltyType {
 }
 
 impl Serialize for PenaltyType {
-    fn serialize<S: ::serde::Serializer>(&self, serializer: &mut S)
-                                       -> Result<(), S::Error> {
+    fn serialize<S: ::serde::Serializer>(&self, serializer: S)
+                                       -> Result<S::Ok, S::Error> {
         serializer.serialize_char(self.as_char())
     }
 }
