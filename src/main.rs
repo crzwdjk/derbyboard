@@ -4,7 +4,7 @@
 extern crate rocket;
 extern crate serde_json;
 #[macro_use] extern crate lazy_static;
-#[macro_use] extern crate rocket_contrib;
+extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 extern crate serde;
 
@@ -17,21 +17,18 @@ use std::time::Duration;
 use std::ffi::OsStr;
 
 mod gamestate;
+mod jamstate;
 mod clock;
 mod roster;
 mod penaltycodes;
 
-use gamestate::{Penalty,Team};
+use gamestate::{Penalty};
+use jamstate::Team;
 #[get("/")]
 fn index() -> &'static str {
     "Hello, world!"
 }
 
-
-#[get("/penalties")]
-fn penalties() -> content::HTML<&'static str> {
-    content::HTML(include_str!("penalties.html"))
-}
 
 #[derive(Deserialize)]
 struct PenaltyCmd {
@@ -98,7 +95,8 @@ fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
 {
     let mut game = gamestate::get_game_mut();
     match cmd.0 {
-        UpdateCommand::score_adj(a1, a2) => game.adj_score(a1, a2),
+        UpdateCommand::score_adj(a1, a2) =>
+            game.cur_jam_mut().adj_score(a1, a2),
         UpdateCommand::start_jam => {
             println!("Jam On!");
             game.start_jam();
