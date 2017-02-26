@@ -1,0 +1,40 @@
+<html>
+<head>
+<meta name="viewport"
+      content="height = device-height, width = device-width,
+               initial-scale = 1.0, minimum-scale = 1.0, maximum-scale = 1.0,
+               user-scalable = no, target-densitydpi = device-dpi">
+<style>
+</style>
+<title>Jam Controls</title>
+</head>
+<body>
+  <div id="period">
+    <div id="periodnum">Period</div>
+    <div id="periodtime">:</div>
+  </div>
+  <div id="jam">
+    <div id="clocklabel">Jam</div>
+    <div id="clocktime">:</div>
+    <button id="startjam">Start Jam</button>
+    <button id="stopjam">Stop Jam</button>
+  </div>
+  <div id="timeouts">
+    <button id="timeoutbtn">Off. Timeout</button>
+    <div id="team1">
+      <button id="team1to">Timeout</button><span id="team1tos"></span>
+      <button id="team1or">Review</button><span id="team1ors"></span>
+      <button id="review1retain" hidden="1">Retained</button>
+      <button id="review1lost" hidden="1">Lost</button>
+    </div>
+    <div id="team2">
+      <button id="team2to">Timeout</button><span id="team2tos"></span>
+      <button id="team2or">Review</button><span id="team2ors"></span>
+      <button id="review2retain" hidden="1">Retained</button>
+      <button id="review2lost" hidden="1">Lost</button>
+    </div>
+  </div>
+
+  <script src="mobilejt.js"></script>
+</body>
+</html>

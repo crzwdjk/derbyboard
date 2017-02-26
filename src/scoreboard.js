@@ -18,43 +18,45 @@ function format_time(time) {
     }
 }
 
+function updateClock(data) {
+    var label = 'Jam 1';
+    var clock = '2:00';
+    for (var label in data) {
+        switch (label) {
+        case 'timeout':
+            label = 'Official Timeout';
+            clock = data.timeout;
+            break;
+        case 'teamtimeout':
+            label = 'Team Timeout';
+            clock = data.teamtimeout[1];
+            break;
+        case 'review':
+            label = 'Official Review';
+            clock = data.review[1];
+            break;
+        case 'jam':
+            label = 'Jam ' + data.jam[0];
+            clock = data.jam[1];
+            break;
+        case 'lineup':
+            label = 'Lineup';
+            clock = data.lineup;
+            break;
+        }
+    }
+    setInner('aclabel', label);
+    setInner('actime', format_time(clock.secs));
+}
+
 function updateScore(data) {
     setInner('totalscore1', data.score[0]);
     setInner('totalscore2', data.score[1]);
     setInner('jamscore1', data.jamscore[0]);
     setInner('jamscore2', data.jamscore[1]);
     setInner('periodtime', format_time(data.gameclock[1].secs));
-    // if there's a lineup time, set lineup time
-    if (data.lineupclock) {
-        var lb = document.getElementById('lubox');
-        lb.hidden = false;
-        setInner('lulabel', 'Lineup');
-        setInner('lutime', format_time(data.lineupclock.secs));
-        var jb = document.getElementById('jambox');
-        jb.hidden = true;
-        var tb = document.getElementById('totimebox');
-        tb.hidden = true;
-    } else if (data.timeout) {
-        var tb = document.getElementById('totimebox');
-        setInner('tolabel', 'Timeout');
-        setInner('totime', format_time(data.timeout.secs));
-        tb.hidden = false;
-        var jb = document.getElementById('jambox');
-        jb.hidden = true;
-        var lb = document.getElementById('lubox');
-        lb.hidden = true;
-    } else {
-        var lb = document.getElementById('lubox');
-        lb.hidden = true;
-        var tb = document.getElementById('totimebox');
-        tb.hidden = true;
-        var jb = document.getElementById('jambox');
-        jb.hidden = false;
-        setInner('jamtime', format_time(data.jamclock[1].secs));
-        setInner('jtlabel', "Jam " + data.jamclock[0]);
-    }
     setInner('ptlabel', "Period " + data.gameclock[0]);
-    console.log(data);
+    updateClock(data.activeclock);
 }
 
 function updater() {

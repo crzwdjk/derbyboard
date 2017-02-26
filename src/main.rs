@@ -22,7 +22,7 @@ mod clock;
 mod roster;
 mod penaltycodes;
 
-use gamestate::{Penalty};
+use gamestate::{Penalty, ActiveClock};
 use jamstate::Team;
 #[get("/")]
 fn index() -> &'static str {
@@ -43,39 +43,24 @@ fn add_penalty(team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Pe
     JSON(game.team_penalties(team).unwrap())
 }
 
-#[get("/score")]
-fn scoreboard() -> content::HTML<&'static str> {
-    content::HTML(include_str!("scoreboard.html"))
-}
-
 #[derive(Serialize)]
 struct ScoreUpdate {
     score: (u32, u32),
     jamscore: (u32, u32),
     gameclock: (u8, Duration),
-    jamclock: (u8, Duration),
-    lineupclock: Option<Duration>,
-    timeout: Option<Duration>,
+    activeclock: ActiveClock,
+    timeouts: (u8, u8),
+    reviews: (u8, u8),
 }
 
 #[get("/score/update")]
 fn scoreupdate() -> JSON<ScoreUpdate> {
     let game = gamestate::get_game();
-    let activeclock = game.get_active_clock();
-    let mut lineupclock = None;
-    let mut jamclock = (game.jamnum(), Duration::new(120, 0));
-    let mut timeout = None;
-    match activeclock.kind {
-        gamestate::ClockKind::Jam => jamclock.1 = activeclock.clock,
-        gamestate::ClockKind::Lineup => lineupclock = Some(activeclock.clock),
-        gamestate::ClockKind::OfficialTimeout => timeout = Some(activeclock.clock),
-        _ => (),
-    };
 
     JSON(ScoreUpdate {
-        score: game.total_score(), jamscore: game.jam_score(),
-        gameclock: game.get_time(), jamclock: jamclock,
-        lineupclock: lineupclock, timeout: timeout,
+        score: game.total_score(), jamscore: game.cur_jam().jam_score(),
+        gameclock: game.get_time(), activeclock: game.get_active_clock(),
+        reviews: game.reviews(), timeouts: game.timeouts(),
     })
 }
 
@@ -83,11 +68,15 @@ fn scoreupdate() -> JSON<ScoreUpdate> {
 #[derive(Deserialize)]
 enum UpdateCommand {
     score_adj(i8, i8),
-    score_set(i8, i8),
+    //score_set(i8, i8),
     start_jam,
     stop_jam,
     team_timeout(Team),
+    star_pass(Team),
     official_timeout,
+    official_review(Team),
+    review_lost(Team),
+    review_retained(Team),
 }
 
 #[post("/score/update", format = "application/json", data = "<cmd>")]
@@ -110,22 +99,38 @@ fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
         },
         UpdateCommand::team_timeout(team) => {
             game.team_timeout(team);
-        }
-        _ => { /* XXX */ }
-    }
+        },
+        UpdateCommand::star_pass(team) => {
+            game.cur_jam_mut()[team].pass_star();
+        },
+        _ => {}
+    }; 
     "success"
 }
 
+#[get("/score")]
+fn scoreboard() -> content::HTML<&'static str> {
+    content::HTML(include_str!("scoreboard.html"))
+}
+
 #[get("/scoreboard.js")]
-fn scoreboardjs() -> &'static str {
-    include_str!("scoreboard.js")
+fn scoreboardjs() -> &'static str { include_str!("scoreboard.js") }
+
+#[get("/penalties")]
+fn penalties() -> content::HTML<&'static str> {
+    content::HTML(include_str!("penalties.html"))
 }
 
 #[get("/penalties.js")]
-fn penaltiesjs() -> &'static str {
-    include_str!("penalties.js")
-}
+fn penaltiesjs() -> &'static str { include_str!("penalties.js") }
 
+#[get("/mobilejt.js")]
+fn mobilejtjs() -> &'static str { include_str!("mobilejt.js") }
+
+#[get("/mobilejt")]
+fn mobilejt() -> content::HTML<&'static str> {
+    content::HTML(include_str!("mobilejt.html"))
+}
 
 #[get("/gameroster/<team>")]
 fn gameroster(team: Team) -> JSON<roster::Team> {
@@ -145,7 +150,9 @@ fn main() {
         }
     });
 
-    rocket::ignite().mount("/", routes![index, penalties, penaltiesjs, gameroster,
+    rocket::ignite().mount("/", routes![index,  gameroster,
+                                        penalties, penaltiesjs,
                                         scoreboard, scoreboardjs,
+                                        mobilejt, mobilejtjs,
                                         scoreupdate, post_score, add_penalty]).launch();
 }

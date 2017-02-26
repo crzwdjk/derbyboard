@@ -39,16 +39,14 @@
       font-size: 15vw;
       flex: 10;
     }
-    #periodtime, #jamtime {
+    #periodtime, #actime {
       font-size: 15vw;
       background: darkgreen;
     }
-    #lutime {
-      font-size: 15vw;
+    .lutime {
       background: darkred;
     }
-    #totime {
-      font-size: 15vw;
+    .totime {
       background: darkcyan;
     }
     .tobar {
@@ -56,7 +54,7 @@
       display: flex;
       flex-direction: column;
     }
-    #periodbox, #jambox, #lubox, #totimebox {
+    #periodbox, #acbox {
       flex: 1;
     }
     .tobox {
@@ -139,17 +137,9 @@
       <div id="ptlabel">Period 0</div>
       <div id="periodtime">30:00</div>
     </div>
-    <div id="jambox">
-      <div id="jtlabel">Jam 0</div>
-      <div id="jamtime">2:00</div>
-    </div>
-    <div id="lubox" hidden="true">
-      <div id="lulabel"></div>
-      <div id="lutime"></div>
-    </div>
-    <div id="totimebox" hidden="true">
-      <div id="tolabel"></div>
-      <div id="totime"></div>
+    <div id="acbox">
+      <div id="aclabel">Jam 0</div>
+      <div id="actime">2:00</div>
     </div>
   </div>
   <script src="scoreboard.js"></script>
