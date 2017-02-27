@@ -27,9 +27,9 @@ function updateClock(data) {
             label = 'Official Timeout';
             clock = data.timeout;
             break;
-        case 'teamtimeout':
+        case 'team_timeout':
             label = 'Team Timeout';
-            clock = data.teamtimeout[1];
+            clock = data.team_timeout[1];
             break;
         case 'review':
             label = 'Official Review';
