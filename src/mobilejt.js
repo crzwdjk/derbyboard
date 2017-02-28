@@ -39,8 +39,8 @@ function format_time(time) {
 function updateClock(data) {
     var label = 'none';
     var clock = '0:00';
-    for (var label in data) {
-        switch (label) {
+    for (var l in data) {
+        switch (l) {
         case 'timeout':
             label = 'Official Timeout';
             clock = data.timeout;

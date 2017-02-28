@@ -21,8 +21,8 @@ function format_time(time) {
 function updateClock(data) {
     var label = 'Jam 1';
     var clock = '2:00';
-    for (var label in data) {
-        switch (label) {
+    for (var l in data) {
+        switch (l) {
         case 'timeout':
             label = 'Official Timeout';
             clock = data.timeout;

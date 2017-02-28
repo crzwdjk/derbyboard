@@ -123,6 +123,7 @@ impl GameState {
                         ActiveClock::intermission(duration),
                     ActiveTimeout::TimeToDerby =>
                         ActiveClock::time_to_derby(duration),
+                    ActiveTimeout::None => ActiveClock::none,
                     _ => unreachable!(),
                 }
             }
@@ -234,6 +235,12 @@ impl GameState {
     }
     pub fn roster(&self, team: Team) -> &roster::Team {
         &self[team].roster
+    }
+    pub fn timeouts(&self) -> (u8, u8) {
+        (self[Team::Home].timeouts, self[Team::Away].timeouts)
+    }
+    pub fn reviews(&self) -> (u8, u8) {
+        (self[Team::Home].reviews, self[Team::Away].reviews)
     }
     pub fn cur_jam(&self) -> &JamState { self.jams.last().unwrap() }
     pub fn cur_jam_mut(&mut self) -> &mut JamState {
