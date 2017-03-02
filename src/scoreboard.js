@@ -43,6 +43,10 @@ function updateClock(data) {
             label = 'Lineup';
             clock = data.lineup;
             break;
+        case 'intermission':
+            label = 'Halftime';
+            clock = data.intermission;
+            break;
         }
     }
     setInner('aclabel', label);

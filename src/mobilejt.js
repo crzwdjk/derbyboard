@@ -62,6 +62,10 @@ function updateClock(data) {
             label = 'Lineup';
             clock = data.lineup;
             break;
+        case 'intermission':
+            label = 'Halftime';
+            clock = data.intermission;
+            break;
         }
     }
     setInner('clocklabel', label);
@@ -83,11 +87,9 @@ function updateScore(data) {
     disable('team2to', data.timeouts[1] < 1);
     disable('team2or', data.reviews[1] < 1);
     if (data.activeclock.review) {
-        // show OR retained/lost buttons
+        // TODO show OR retained/lost buttons
     }
 }
-/* The one piece of somewhat interesting state:
-   In an OR, the command buttons change to Lost/Retained */
 
 function update() {
     var xhr = new XMLHttpRequest();
