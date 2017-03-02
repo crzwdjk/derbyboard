@@ -5,6 +5,9 @@
                initial-scale = 1.0, minimum-scale = 1.0, maximum-scale = 1.0,
                user-scalable = no, target-densitydpi = device-dpi">
 <style>
+  .error {
+    border-color: red;
+  }
 </style>
 <title>Jam Controls</title>
 </head>
@@ -12,6 +15,7 @@
   <div id="period">
     <div id="periodnum">Period</div>
     <div id="periodtime">:</div>
+    <input id="periodtimeset" hidden="1"></input>
   </div>
   <div id="jam">
     <div id="clocklabel">Jam</div>

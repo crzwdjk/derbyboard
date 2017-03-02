@@ -69,6 +69,7 @@ fn scoreupdate() -> JSON<ScoreUpdate> {
 enum UpdateCommand {
     score_adj(i8, i8),
     //score_set(i8, i8),
+    set_time(u16),
     start_jam,
     stop_jam,
     team_timeout(Team),
@@ -103,6 +104,9 @@ fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
         UpdateCommand::star_pass(team) => {
             game.cur_jam_mut()[team].pass_star();
         },
+        UpdateCommand::set_time(secs) => {
+            game.set_time(Duration::new(secs as u64, 0));
+        }
         _ => {}
     }; 
     "success"

@@ -229,7 +229,9 @@ impl GameState {
         self.clock.other_timeout();
         review_allowed
     }
-
+    pub fn set_time(&mut self, time: Duration) {
+        self.clock.set_time(time);
+    }
     pub fn review_lost(&mut self, team: Team) {
         self[team].reviews = 0;
     }

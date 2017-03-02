@@ -1,7 +1,7 @@
-function send_command(update) {
+function send_command(update, callback) {
     console.log(update);
     var xhr = new XMLHttpRequest();
-    // TOeDO: debounce enable
+    // TODO: debounce enable
     xhr.open('POST', "/score/update");
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onreadystatechange = function () {
@@ -9,6 +9,7 @@ function send_command(update) {
             if (xhr.status !== 200) {
                 // TODO: handle error
             }
+            if (callback) { callback() }
             // TODO: debounce disable
         }
     };
@@ -99,6 +100,35 @@ function update() {
     xhr.send();
 }
 
+function parseTime(str) {
+    var re = /^(?:\d{1,2}|\d{0,2}:\d{2})$/;
+    var result = re.exec(str);
+    if (result) {
+        var minsec = str.split(":").reverse();
+        var min = parseInt(minsec[1] || 0);
+        return parseInt(minsec[0]) + min * 60;
+    } else {
+        return null;
+    }
+}
+
+function doSetTime() {
+    this.classList.remove('error');
+    time = parseTime(this.value);
+    if (time != null) {
+        this.disabled = true;
+        let inp = this;
+        send_command({set_time: time}, function () {
+            inp.hidden = true;
+            document.getElementById('periodtime').hidden = false;
+        });
+        // TODO: XHR should have a timeout.
+    } else {
+        // red outline, try again
+        this.classList.add('error');
+    }
+}
+
 function init() {
     addclick('startjam', function () { send_command({start_jam: null})} );
     addclick('stopjam', function () { send_command({stop_jam: null})} );
@@ -108,6 +138,15 @@ function init() {
     addclick('team1or', function () { send_command({official_review: 'Home'})});
     addclick('team2to', function () { send_command({team_timeout: 'Away'})});
     addclick('team2or', function () { send_command({official_review: 'Away'})});
+    addclick('periodtime', function () {
+        this.hidden = true;
+        var setfield = document.getElementById('periodtimeset');
+        setfield.value = this.innerText;
+        setfield.hidden = false;
+        setfield.disabled = false;
+        setfield.onblur = doSetTime;
+    });
+
     window.setInterval(function () { update() }, 500);
 }
 

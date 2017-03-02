@@ -166,6 +166,9 @@ impl Clock {
     pub fn get_time(&self) -> (u8, Duration) {
         (self.period, self.gameclock)
     }
+    pub fn set_time(&mut self, time: Duration) {
+        self.gameclock = time;
+    }
 
     pub fn get_active_clock(&self) -> (Clocktype, Duration) {
         (self.clocktype, self.activeclock)
