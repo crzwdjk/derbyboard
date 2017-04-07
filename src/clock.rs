@@ -60,7 +60,6 @@ impl Clock {
         match ty {
             Clocktype::Jam => Duration::new(120, 0),
             Clocktype::Lineup => Duration::new(30, 0),
-            Clocktype::TeamTimeout => Duration::new(60, 0),
             Clocktype::Intermission => Duration::new(10 * 60, 0),
             _ => Duration::new(0, 0),
         }
