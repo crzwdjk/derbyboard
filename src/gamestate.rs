@@ -145,10 +145,11 @@ impl GameState {
     }
 
     pub fn tick(&mut self) -> () {
-        let clocktype = self.clock.get_active_clock().0;
+        let oldclocktype = self.clock.get_active_clock().0;
         let clock_expired = self.clock.tick();
         if clock_expired {
-            match clocktype {
+            let newclocktype = self.clock.get_active_clock().0;
+            match oldclocktype {
                 clock::Clocktype::Jam => self.stop_jam(),
                 clock::Clocktype::Intermission => {
                     if let ActiveTimeout::Halftime = self.tostate {
@@ -163,7 +164,21 @@ impl GameState {
                 _ => (),
                 // Nothing needed for lineup, our jam exists
                 // Timeout: expire??
-            }
+            };
+            match newclocktype {
+                clock::Clocktype::Intermission => {
+                    if self.clock.get_time().0 == 1 {
+                        // period 1 expired, in intermission
+                        self.tostate = ActiveTimeout::Halftime;
+                    } else {
+                        // period 2 expired, game over.
+                        // TODO: overtime
+                        self.tostate = ActiveTimeout::None;
+                    }
+                },
+                clock::Clocktype::Jam | clock::Clocktype::Lineup => {},
+                _ => unreachable!()
+            };
         }
     }
     pub fn jamnum(&self) -> u8 {
