@@ -85,6 +85,9 @@ function load() {
             name.innerText = team.name;
         });
     }
+    window.setInterval(function(f) {
+        update(1); update(2);
+    }, 1000);
 }
 
 function update_board(team, penalties) {
@@ -122,11 +125,11 @@ function penalty(team, skater, penaltycode) {
 
 function update(team) {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', document.location + team);
+    xhr.open('GET', document.location +'/' + team);
     xhr.onreadystatechange = function () {
         if (xhr.readyState == XMLHttpRequest.DONE && xhr.status == 200) {
             var resp = JSON.parse(xhr.responseText);
-            update_board(resp);
+            update_board(team, resp);
         }
     }
     xhr.send();

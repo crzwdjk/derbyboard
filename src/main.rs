@@ -40,7 +40,14 @@ struct PenaltyCmd {
 fn add_penalty(team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
     let mut game = gamestate::get_game_mut();
     game.penalty(team, cmd.skater.as_str(), cmd.code);
-    JSON(game.team_penalties(team).unwrap())
+    JSON(game.team_penalties(team))
+}
+
+#[get("/penalties/<team>")]
+fn get_penalties(team: Team) -> JSON<HashMap<String, Vec<Penalty>>>
+{
+    let game = gamestate::get_game();
+    JSON(game.team_penalties(team))
 }
 
 #[derive(Serialize)]
@@ -164,7 +171,7 @@ fn main() {
     });
 
     rocket::ignite().mount("/", routes![index,  gameroster,
-                                        penalties, penaltiesjs,
+                                        penalties, penaltiesjs, get_penalties,
                                         scoreboard, scoreboardjs,
                                         mobilejt, mobilejtjs,
                                         scoreupdate, post_score, add_penalty]).launch();

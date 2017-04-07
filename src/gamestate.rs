@@ -170,7 +170,7 @@ impl GameState {
         return (self.jams.len() - self.second_period_start) as u8;
     }
 
-    pub fn team_penalties(&self, team: Team) -> Option<HashMap<String, Vec<Penalty>>> {
+    pub fn team_penalties(&self, team: Team) -> HashMap<String, Vec<Penalty>> {
         let roster = &self[team].roster.skaters;
         let nskaters = roster.len();
         let mut penalties_by_skater = Vec::new();
@@ -185,7 +185,7 @@ impl GameState {
         }
 
         let z = roster.iter().map(|s| s.number.clone()).zip(penalties_by_skater.into_iter());
-        Some(HashMap::from_iter(z))
+        HashMap::from_iter(z)
     }
 
     pub fn penalty(&mut self, team: Team, skater: &str, code: char) {
