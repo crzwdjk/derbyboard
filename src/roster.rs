@@ -2,6 +2,8 @@ use std::io::BufRead;
 use std::fs::read_dir;
 use std::ffi::OsStr;
 use std::io;
+use derbyjson;
+use serde_json;
 
 #[derive(Clone, Serialize)]
 pub struct Skater {
@@ -9,6 +11,29 @@ pub struct Skater {
     pub name: String,
 }
 
+impl Skater {
+    pub fn from_derbyjson(dj_person: derbyjson::Person)
+                          -> Result<Skater, String> {
+        let name = dj_person.name;
+        if let Some(number) = dj_person.number {
+            if number.len() > 0 {
+                Ok(Skater { name: name, number: number })
+            } else {
+                Err(format!("Skater {} has a zero length number", name))
+            }
+        } else {
+            Err(format!("Skater {} has no number!", name))
+        }
+    }
+    pub fn as_derbyjson(&self) -> derbyjson::Person {
+        derbyjson::Person {
+            name: self.name.clone(),
+            number: Some(self.number.clone()),
+            insurance: None, certifications: None, league: None,
+            legal: None, roles: vec!(), skated: None, uuid: None,
+        }
+    }
+}
 
 #[derive(Clone, Serialize)]
 pub struct Team {
@@ -56,6 +81,41 @@ impl Team {
         ret.skaters.sort_by(|k1, k2| k1.number.cmp(&k2.number));
         Ok(ret)
     }
+    fn from_derbyjson(dj_team: derbyjson::Team) -> Team {
+        let name = if let Some(league) = dj_team.league {
+            format!("{} - {}", league, dj_team.name)
+        } else {
+            dj_team.name
+        };
+        let mut skaters = dj_team.persons.into_iter().filter_map(|person| {
+            match Skater::from_derbyjson(person) {
+                Ok(skater) => Some(skater),
+                Err(err) => {
+                    println!("Error loading skater: {}", err);
+                    None
+                }
+            }
+        }).collect::<Vec<Skater>>();
+        skaters.sort_by(|k1, k2| k1.number.cmp(&k2.number));
+        Team { name: name, skaters: skaters }
+    }
+    fn as_derbyjson(&self) -> derbyjson::Team {
+        let dj_skaters = self.skaters.iter().map(|s| s.as_derbyjson());
+        derbyjson::Team {
+            name: self.name.clone(),
+            persons: dj_skaters.collect(),
+            league: None, abbreviation: None, level: None,
+            date: None, color: None, logo: None,
+        }
+    }
+}
+
+fn load_roster_json<R>(mut input: R) -> Result<Vec<Team>, derbyjson::Error>
+    where R : io::Read
+{
+    let dj = derbyjson::load_roster(input)?;
+    Ok(dj.teams.into_iter().map(
+        |(id, dj_team)| Team::from_derbyjson(dj_team)).collect())
 }
 
 pub fn load_rosters(rosterdir: &OsStr) -> io::Result<Vec<Team>> {
@@ -68,6 +128,15 @@ pub fn load_rosters(rosterdir: &OsStr) -> io::Result<Vec<Team>> {
         rosters.push(team);
     }
     Ok(rosters)
+}
+
+pub fn save_roster_json<W>(mut output: W, rosters: &[Team])
+                           -> serde_json::Result<()>
+    where W : io::Write
+{
+    let dj_teams = rosters.iter().map(|t| (format!("{}", t.name), t.as_derbyjson()));
+    let dj_root = derbyjson::Rosters::new(dj_teams.collect());
+    serde_json::to_writer(&mut output, &dj_root)
 }
 
 #[cfg(test)]

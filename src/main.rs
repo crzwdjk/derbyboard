@@ -7,6 +7,7 @@ extern crate serde_json;
 extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 extern crate serde;
+extern crate derbyjson;
 
 use rocket::response::*;
 use rocket_contrib::JSON;
