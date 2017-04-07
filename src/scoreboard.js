@@ -65,6 +65,45 @@ function updateScore(data) {
     setInner('periodtime', format_time(data.gameclock[1].secs));
     setInner('ptlabel', "Period " + data.gameclock[0]);
     updateClock(data.activeclock);
+    setTimeouts(data.timeouts, data.reviews, data.activeclock);
+}
+function setTeamDots(teambox, timeouts, reviews, in_timeout, in_review) {
+    var todots = teambox.getElementsByClassName('tobox')[0].children;
+    for (let i = 0; i < todots.length; i++) {
+        if (i < timeouts) {
+            todots[i].className = "dot";
+        } else if (i == timeouts && in_timeout) {
+            todots[i].className = "dot blinking";
+        } else {
+            todots[i].className = "dot hidden";
+        }
+    }
+    var ordot = teambox.getElementsByClassName('orbox')[0].children[0];
+    if (in_review) {
+        ordot.className = "dot blinking";
+    } else if (reviews > 0) {
+        ordot.className = "dot";
+    } else {
+        ordot.className = "dot hidden";
+    }
+}
+
+function setTimeouts(timeouts, reviews, activeclock) {
+    // TODO: only do this if TO state changes
+    console.log(activeclock);
+    let toTeam = 0;
+    if ('team_timeout' in activeclock) {
+        toTeam = activeclock.team_timeout[0] == 'Home' ? 1 : 2;
+    }
+    let orTeam = 0;
+    if ('review' in activeclock) {
+        orTeam = activeclock.team_timeout[0] == 'Home' ? 1 : 2;
+    }
+    for (let team = 1; team <= 2; team++) {
+        var teambox = document.getElementById('team' + team);
+        setTeamDots(teambox, timeouts[team - 1], reviews[team - 1],
+                    toTeam == team, orTeam == team);
+    }
 }
 
 function updater() {
