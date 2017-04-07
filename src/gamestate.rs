@@ -245,6 +245,10 @@ impl GameState {
         (self[Team::Home].reviews, self[Team::Away].reviews)
     }
     pub fn cur_jam(&self) -> &JamState { self.jams.last().unwrap() }
+    pub fn prev_jam(&self) -> Option<&JamState> {
+        let len = self.jams.len();
+        self.jams.get(len - 2)
+    }
     pub fn cur_jam_mut(&mut self) -> &mut JamState {
         self.jams.last_mut().unwrap()
     }

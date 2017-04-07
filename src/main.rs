@@ -56,9 +56,18 @@ struct ScoreUpdate {
 #[get("/score/update")]
 fn scoreupdate() -> JSON<ScoreUpdate> {
     let game = gamestate::get_game();
+    let cur_jam = game.cur_jam();
+    let jamscore = if cur_jam.starttime.is_some() {
+        cur_jam.jam_score()
+    } else {
+        match game.prev_jam() {
+            Some(ref prev_jam) => prev_jam.jam_score(),
+            None => (0, 0)
+        }
+    };
 
     JSON(ScoreUpdate {
-        score: game.total_score(), jamscore: game.cur_jam().jam_score(),
+        score: game.total_score(), jamscore: jamscore,
         gameclock: game.get_time(), activeclock: game.get_active_clock(),
         reviews: game.reviews(), timeouts: game.timeouts(),
     })
