@@ -104,26 +104,14 @@ fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
     match cmd.0 {
         UpdateCommand::score_adj(a1, a2) =>
             game.cur_jam_mut().adj_score(a1, a2),
-        UpdateCommand::start_jam => {
-            println!("Jam On!");
-            game.start_jam();
-        },
-        UpdateCommand::stop_jam => {
-            println!("Jam Off!");
-            game.stop_jam();
-        },
-        UpdateCommand::official_timeout => {
-            game.official_timeout();
-        },
-        UpdateCommand::team_timeout(team) => {
-            game.team_timeout(team);
-        },
-        UpdateCommand::star_pass(team) => {
-            game.cur_jam_mut()[team].pass_star();
-        },
-        UpdateCommand::set_time(secs) => {
-            game.set_time(Duration::new(secs as u64, 0));
-        }
+        UpdateCommand::start_jam => game.start_jam(),
+        UpdateCommand::stop_jam => game.stop_jam(),
+        UpdateCommand::official_timeout => game.official_timeout(),
+        UpdateCommand::team_timeout(team) => { game.team_timeout(team); },
+        UpdateCommand::star_pass(team) =>
+            game.cur_jam_mut()[team].pass_star(),
+        UpdateCommand::set_time(secs) =>
+            game.set_time(Duration::new(secs as u64, 0)),
         _ => {}
     }; 
     "success"
