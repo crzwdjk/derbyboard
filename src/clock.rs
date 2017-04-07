@@ -16,14 +16,13 @@ impl Clocktype {
         match self {
             Clocktype::Jam => Clocktype::Lineup,
             Clocktype::Lineup => Clocktype::Jam,
-            Clocktype::TeamTimeout => Clocktype::Lineup,
+            Clocktype::TeamTimeout => Clocktype::OtherTimeout,
             _ => self,
         }
     }
     pub fn counts_down(self) -> bool {
         match self {
-            Clocktype::Jam | Clocktype::Lineup | Clocktype::TeamTimeout
-                | Clocktype::Intermission
+            Clocktype::Jam | Clocktype::Lineup | Clocktype::Intermission
                 => true,
             _ => false,
         }
@@ -93,6 +92,12 @@ impl Clock {
             };
         } else {
             self.activeclock += decrement;
+            // TODO: clock policy for timeout length
+            if let Clocktype::TeamTimeout = self.clocktype {
+                if self.activeclock >= Duration::new(90, 0) {
+                    self.start_clock(Clocktype::OtherTimeout, None);
+                }
+            }
         }
 
         /* Update game clock */
@@ -173,4 +178,45 @@ impl Clock {
     pub fn get_active_clock(&self) -> (Clocktype, Duration) {
         (self.clocktype, self.activeclock)
     }
+}
+
+#[cfg(test)]
+#[test]
+fn test_jam_start() {
+    let mut clock = Clock::new();
+    clock.start_jam();
+    // check that jam started
+    // sleep 1s
+    // check that things are running
+    // start jam again, check that nothing happened
+}
+
+
+#[cfg(test)]
+#[test]
+fn test_jam_end() {
+    use std::thread;
+    let mut clock = Clock::new();
+    clock.start_jam();
+    assert!(clock.clocktype == Clocktype::Jam);
+    clock.activeclock = Duration::new(0, 500_000_000);
+    thread::sleep(Duration::new(1,0));
+    clock.tick();
+    assert!(clock.clocktype == Clocktype::Lineup);
+
+}
+
+#[cfg(test)]
+#[test]
+fn test_timeout_expires() {
+    use std::thread;
+    let mut clock = Clock::new();
+    clock.start_jam();
+    clock.team_timeout();
+    clock.activeclock = Duration::new(89, 500_000_000);
+    thread::sleep(Duration::new(1,0));
+    clock.tick();
+    assert!(clock.clocktype == Clocktype::OtherTimeout);
+
+
 }
