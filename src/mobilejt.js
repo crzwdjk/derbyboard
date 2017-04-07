@@ -66,6 +66,10 @@ function updateClock(data) {
             label = 'Halftime';
             clock = data.intermission;
             break;
+        case 'time_to_derby':
+            label = "Time To Derby";
+            clock = data.time_to_derby;
+            break;
         }
     }
     setInner('clocklabel', label);
