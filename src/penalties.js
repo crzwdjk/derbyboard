@@ -105,7 +105,14 @@ function update_board(team, penalties) {
         for (i = 0; i < skaterpenalties.length; i++) {
             var p = skaterpenalties[i];
             penaltycells[i].innerText = p.code;
-            jamcells[i].innerText = p.jam;
+            jamcells[i].innerText = p.jam[1];
+            if (p.jam[0] == 2) {
+                penaltycells[i].classList.add('secondhalf');
+                jamcells[i].classList.add('secondhalf');
+            } else {
+                penaltycells[i].classList.remove('secondhalf');
+                jamcells[i].classList.remove('secondhalf');
+            }
         }
     }
 }

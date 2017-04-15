@@ -23,7 +23,7 @@ impl TeamState {
 
 #[derive(Serialize, Clone)]
 pub struct Penalty {
-    jam: u8,
+    jam: (u8, u8),
     code: PenaltyType,
 }
 
@@ -169,6 +169,7 @@ impl GameState {
                 clock::Clocktype::Intermission => {
                     if self.clock.get_time().0 == 1 {
                         // period 1 expired, in intermission
+                        self.second_period_start = self.jams.len() - 1;
                         self.tostate = ActiveTimeout::Halftime;
                     } else {
                         // period 2 expired, game over.
@@ -185,16 +186,27 @@ impl GameState {
         return (self.jams.len() - self.second_period_start) as u8;
     }
 
+    fn jamidx_to_periodjam(&self, jamidx: usize) -> (u8, u8) {
+        if self.second_period_start == 0 {
+            (1u8, jamidx as u8 + 1)
+        } else if jamidx < self.second_period_start {
+            (1, jamidx as u8 + 1)
+        } else {
+            (2, (jamidx - self.second_period_start + 1) as u8)
+        }
+    }
+
     pub fn team_penalties(&self, team: Team) -> HashMap<String, Vec<Penalty>> {
         let roster = &self[team].roster.skaters;
         let nskaters = roster.len();
         let mut penalties_by_skater = Vec::new();
         penalties_by_skater.resize(nskaters, Vec::new());
-        for (jamnum, jam) in self.jams.iter().enumerate() {
+        for (jamidx, jam) in self.jams.iter().enumerate() {
             let jampenalties = &jam[team].penalties;
+            let (period, jamnum) = self.jamidx_to_periodjam(jamidx);
             for &(idx, code) in jampenalties {
                 penalties_by_skater[idx].push(Penalty {
-                    code: code, jam: (jamnum + 1) as u8
+                    code: code, jam: (period, jamnum)
                 });
             }
         }
@@ -217,10 +229,12 @@ impl GameState {
         println!("got penalty {} for skater: {} at {} ", code, skater, skater_idx);
     }
     pub fn official_timeout(&mut self) -> () {
+        self.stop_jam();
         self.tostate = ActiveTimeout::Official;
         self.clock.other_timeout();
     }
     pub fn team_timeout(&mut self, team: Team) -> bool {
+        self.stop_jam();
         let timeout_allowed = self[team].timeouts > 0;
         if timeout_allowed {
             self[team].timeouts -=1;
@@ -234,6 +248,7 @@ impl GameState {
     }
 
     pub fn official_review(&mut self, team: Team) -> bool {
+        self.stop_jam();
         let review_allowed = self[team].reviews > 0;
         if review_allowed {
             self[team].reviews -= 1;
