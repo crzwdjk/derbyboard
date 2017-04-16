@@ -226,7 +226,6 @@ impl GameState {
         let jam = self.jams.last_mut().unwrap();
         let mut penalties = &mut jam[team].penalties;
         penalties.push((skater_idx, PenaltyType::from_char(code)));
-        println!("got penalty {} for skater: {} at {} ", code, skater, skater_idx);
     }
     pub fn official_timeout(&mut self) -> () {
         self.stop_jam();
@@ -287,34 +286,19 @@ impl GameState {
  }
 
 pub fn start_game(team1: &roster::Team, team2: &roster::Team) -> () {
-    match CUR_GAME {
-        None => unsafe {
-            let gp = &CUR_GAME as *const Option<RwLock<GameState>> as *mut Option<RwLock<GameState>>;
-            *gp = Some(RwLock::new(GameState::new(team1, team2)));
-        },
-        Some(ref m) => {
-            let mut mg = m.write().unwrap();
-            *mg = GameState::new(team1, team2);
-        }
-    }
+    *CUR_GAME.write().unwrap() = Some(GameState::new(team1, team2));
 }
 
-pub fn get_game<'a>() -> RwLockReadGuard<'a, GameState> {
-    if let Some(ref m) = CUR_GAME {
-        m.read().unwrap()
-    } else {
-        panic!();
-    }
+pub fn get_game<'a>() -> RwLockReadGuard<'a, Option<GameState>> {
+    CUR_GAME.read().unwrap()
 }
 
-pub fn get_game_mut<'a>() -> RwLockWriteGuard<'a, GameState> {
-    if let Some(ref m) = CUR_GAME {
-        m.write().unwrap()
-    } else {
-        panic!();
-    }
+pub fn get_game_mut<'a>() -> RwLockWriteGuard<'a, Option<GameState>> {
+    CUR_GAME.write().unwrap()
 }
 
 use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
 
-static CUR_GAME: Option<RwLock<GameState>> = None;
+lazy_static! {
+    static ref CUR_GAME : RwLock<Option<GameState>> = RwLock::new(None);
+}

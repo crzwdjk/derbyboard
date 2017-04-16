@@ -39,7 +39,8 @@ struct PenaltyCmd {
 
 #[post("/penalties/<team>", format = "application/json", data = "<cmd>")]
 fn add_penalty(team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
-    let mut game = gamestate::get_game_mut();
+    let mut guard = &mut gamestate::get_game_mut();
+    let mut game = guard.as_mut().unwrap();
     game.penalty(team, cmd.skater.as_str(), cmd.code);
     JSON(game.team_penalties(team))
 }
@@ -47,7 +48,8 @@ fn add_penalty(team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Pe
 #[get("/penalties/<team>")]
 fn get_penalties(team: Team) -> JSON<HashMap<String, Vec<Penalty>>>
 {
-    let game = gamestate::get_game();
+    let guard = gamestate::get_game();
+    let game = guard.as_ref().unwrap();
     JSON(game.team_penalties(team))
 }
 
@@ -63,7 +65,8 @@ struct ScoreUpdate {
 
 #[get("/score/update")]
 fn scoreupdate() -> JSON<ScoreUpdate> {
-    let game = gamestate::get_game();
+    let guard = gamestate::get_game();
+    let game = guard.as_ref().unwrap();
     let cur_jam = game.cur_jam();
     let jamscore = if cur_jam.starttime.is_some() {
         cur_jam.jam_score()
@@ -100,7 +103,8 @@ enum UpdateCommand {
 #[post("/score/update", format = "application/json", data = "<cmd>")]
 fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
 {
-    let mut game = gamestate::get_game_mut();
+    let mut guard = gamestate::get_game_mut();
+    let mut game = guard.as_mut().unwrap();
     match cmd.0 {
         UpdateCommand::score_adj(a1, a2) =>
             game.cur_jam_mut().adj_score(a1, a2),
@@ -143,7 +147,8 @@ fn mobilejt() -> content::HTML<&'static str> {
 
 #[get("/gameroster/<team>")]
 fn gameroster(team: Team) -> JSON<roster::Team> {
-    let game = gamestate::get_game();
+    let guard = gamestate::get_game();
+    let game = guard.as_ref().unwrap();
     let skaters = game.roster(team);
     JSON(skaters.clone()) // ew. Why can't we serialize a ref?
 }
@@ -155,7 +160,8 @@ fn main() {
     thread::spawn(move || {
         loop {
             thread::park_timeout(Duration::new(0, 100_000_000));
-            gamestate::get_game_mut().tick();
+            let mut guard = gamestate::get_game_mut();
+            guard.as_mut().unwrap().tick();
         }
     });
 
