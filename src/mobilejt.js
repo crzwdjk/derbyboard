@@ -91,7 +91,16 @@ function updateScore(data) {
     disable('team2to', data.timeouts[1] < 1);
     disable('team2or', data.reviews[1] < 1);
     if (data.activeclock.review) {
-        // TODO show OR retained/lost buttons
+        var team1review = (data.activeclock.review[0] == 'Home');
+        document.getElementById('review1retain').disabled = team1review;
+        document.getElementById('review1lost').disabled = team1review;
+        document.getElementById('review2retain').disabled = !team1review;
+        document.getElementById('review2lost').disabled = !team1review;
+    } else {
+        document.getElementById('review1retain').disabled = true;
+        document.getElementById('review1lost').disabled = true;
+        document.getElementById('review2retain').disabled = true;
+        document.getElementById('review2lost').disabled = true;
     }
 }
 
@@ -144,6 +153,14 @@ function init() {
     addclick('team1or', function () { send_command({official_review: 'Home'})});
     addclick('team2to', function () { send_command({team_timeout: 'Away'})});
     addclick('team2or', function () { send_command({official_review: 'Away'})});
+    addclick('review1retain', function () {
+        send_command({review_retained: 'Home'})});
+    addclick('review1lost', function () {
+        send_command({review_lost: 'Home'})});
+    addclick('review2retain', function () {
+        send_command({review_retained: 'Away'})});
+    addclick('review2lost', function () {
+        send_command({review_lost: 'Away'})});
     addclick('periodtime', function () {
         this.hidden = true;
         var setfield = document.getElementById('periodtimeset');
@@ -156,4 +173,4 @@ function init() {
     window.setInterval(function () { update() }, 500);
 }
 
-init()
+init();
