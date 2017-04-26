@@ -5,6 +5,7 @@ use penaltycodes::*;
 use jamstate::*;
 use roster;
 use clock;
+use std::thread;
 use std::time::*;
 use std::ops::{Index,IndexMut};
 
@@ -16,8 +17,8 @@ pub struct TeamState {
 }
 
 impl TeamState {
-    fn new(roster: &roster::Team) -> TeamState {
-        TeamState { timeouts: 3, reviews: 2, roster: roster.clone() }
+    fn new(roster: roster::Team) -> TeamState {
+        TeamState { timeouts: 3, reviews: 2, roster: roster }
     }
 }
 
@@ -80,12 +81,13 @@ impl IndexMut<Team> for GameState {
 //  if lost, get OR lost, and set to 0.
 
 impl GameState {
-    fn new(roster1: &roster::Team, roster2: &roster::Team) -> GameState {
+    fn new(roster1: roster::Team, roster2: roster::Team,
+           time_to_derby: Duration) -> GameState {
         let firstjam = JamState::default();
         let team1 = TeamState::new(roster1);
         let team2 = TeamState::new(roster2);
         GameState { jams: vec![firstjam], team1: team1, team2: team2,
-                    clock: clock::Clock::new(), second_period_start: 0,
+                    clock: clock::Clock::new(time_to_derby), second_period_start: 0,
                     tostate: ActiveTimeout::TimeToDerby,
         }
     }
@@ -285,8 +287,15 @@ impl GameState {
     }
  }
 
-pub fn start_game(team1: &roster::Team, team2: &roster::Team) -> () {
-    *CUR_GAME.write().unwrap() = Some(GameState::new(team1, team2));
+pub fn start_game(team1: roster::Team, team2: roster::Team, time_to_derby: Duration) -> () {
+    *CUR_GAME.write().unwrap() = Some(GameState::new(team1, team2, time_to_derby));
+    thread::spawn(move || {
+        loop {
+            thread::park_timeout(Duration::new(0, 100_000_000));
+            let mut guard = get_game_mut();
+            guard.as_mut().unwrap().tick();
+        }
+    });
 }
 
 pub fn get_game<'a>() -> RwLockReadGuard<'a, Option<GameState>> {

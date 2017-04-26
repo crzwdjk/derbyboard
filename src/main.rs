@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
@@ -8,28 +8,27 @@ extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
 extern crate serde;
 extern crate derbyjson;
+extern crate handlebars;
+extern crate chrono;
 
-use rocket::response::*;
 use rocket_contrib::JSON;
 
 use std::collections::HashMap;
-use std::thread;
 use std::time::Duration;
-use std::ffi::OsStr;
+use rocket::request::{FromFormValue,Form};
+use rocket::response::Redirect;
 
 mod gamestate;
 mod jamstate;
 mod clock;
 mod roster;
 mod penaltycodes;
+mod staticpages;
+mod guard;
 
 use gamestate::{Penalty, ActiveClock};
 use jamstate::Team;
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
-}
-
+use guard::{Game, MutGame};
 
 #[derive(Deserialize)]
 struct PenaltyCmd {
@@ -38,9 +37,7 @@ struct PenaltyCmd {
 }
 
 #[post("/penalties/<team>", format = "application/json", data = "<cmd>")]
-fn add_penalty(team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
-    let mut guard = &mut gamestate::get_game_mut();
-    let mut game = guard.as_mut().unwrap();
+fn add_penalty(mut game: MutGame, team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
     game.penalty(team, cmd.skater.as_str(), cmd.code);
     JSON(game.team_penalties(team))
 }
@@ -64,9 +61,7 @@ struct ScoreUpdate {
 }
 
 #[get("/score/update")]
-fn scoreupdate() -> JSON<ScoreUpdate> {
-    let guard = gamestate::get_game();
-    let game = guard.as_ref().unwrap();
+fn scoreupdate(game: Game) -> JSON<ScoreUpdate> {
     let cur_jam = game.cur_jam();
     let jamscore = if cur_jam.starttime.is_some() {
         cur_jam.jam_score()
@@ -101,10 +96,8 @@ enum UpdateCommand {
 }
 
 #[post("/score/update", format = "application/json", data = "<cmd>")]
-fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
+fn post_score(mut game: MutGame, cmd: JSON<UpdateCommand>) -> &'static str
 {
-    let mut guard = gamestate::get_game_mut();
-    let mut game = guard.as_mut().unwrap();
     match cmd.0 {
         UpdateCommand::score_adj(a1, a2) =>
             game.cur_jam_mut().adj_score(a1, a2),
@@ -112,62 +105,109 @@ fn post_score(cmd: JSON<UpdateCommand>) -> &'static str
         UpdateCommand::stop_jam => game.stop_jam(),
         UpdateCommand::official_timeout => game.official_timeout(),
         UpdateCommand::team_timeout(team) => { game.team_timeout(team); },
+        UpdateCommand::official_review(team) => { game.official_review(team); }
         UpdateCommand::star_pass(team) =>
             game.cur_jam_mut()[team].pass_star(),
         UpdateCommand::set_time(secs) =>
             game.set_time(Duration::new(secs as u64, 0)),
-        _ => {}
+        UpdateCommand::review_lost(team) => game.review_lost(team),
+        // don't need to actually do anything for this case.
+        UpdateCommand::review_retained(_) => (),
     }; 
     "success"
 }
 
-#[get("/score")]
-fn scoreboard() -> content::HTML<&'static str> {
-    content::HTML(include_str!("scoreboard.html"))
+enum TimeType { TimeToDerby, StartAt }
+impl<'a> FromFormValue<'a> for TimeType {
+    type Error = &'a str;
+    fn from_form_value(v: &'a str) -> Result<Self, Self::Error> {
+        match v {
+            "1" => Ok(TimeType::StartAt),
+            "2" => Ok(TimeType::TimeToDerby),
+            _ => Err(v),
+        }
+    }
 }
 
-#[get("/scoreboard.js")]
-fn scoreboardjs() -> &'static str { include_str!("scoreboard.js") }
-
-#[get("/penalties")]
-fn penalties() -> content::HTML<&'static str> {
-    content::HTML(include_str!("penalties.html"))
+#[derive(Clone,Copy)]
+enum TimeAMPM { AM, PM, None }
+impl<'a> FromFormValue<'a> for TimeAMPM {
+    type Error = &'a str;
+    fn from_form_value(v: &'a str) -> Result<Self, Self::Error> {
+        match v {
+            "AM" => Ok(TimeAMPM::AM),
+            "PM" => Ok(TimeAMPM::PM),
+            "" => Ok(TimeAMPM::None),
+            _ => Err(v),
+        }
+    }
 }
 
-#[get("/penalties.js")]
-fn penaltiesjs() -> &'static str { include_str!("penalties.js") }
+#[derive(FromForm)]
+struct StartGameCommand<'a> {
+    hometeam: &'a str,
+    awayteam: &'a str,
+    timetype: TimeType,
+    at_hrs: Option<u8>,
+    at_mins: Option<u8>,
+    at_ampm: TimeAMPM,
+    ttd_hrs: Option<u8>,
+    ttd_mins: Option<u8>,
+    ttd_secs: Option<u8>,
+}
 
-#[get("/mobilejt.js")]
-fn mobilejtjs() -> &'static str { include_str!("mobilejt.js") }
+fn start_at_time(at_hrs: u8, at_mins: u8, at_ampm: TimeAMPM) -> Result<Duration, &'static str> {
+    if at_hrs >= 24 { return Err("Bad hours") }
+    if at_mins >= 60 { return Err("Bad minutes") }
+    let real_hrs = match at_ampm {
+        TimeAMPM::None => at_hrs,
+        TimeAMPM::AM if at_hrs < 12 => at_hrs,
+        TimeAMPM::AM if at_hrs == 12 => 0,
+        TimeAMPM::PM if at_hrs < 12 => at_hrs + 12,
+        TimeAMPM::PM if at_hrs >= 12 => 12,
+        _ => return Err("Bad hours"),
+    };
+    let now = chrono::Local::now().time();
+    let when = chrono::naive::time::NaiveTime::from_hms(real_hrs as u32, at_mins as u32, 0);
+    let duration = if now < when {
+        when.signed_duration_since(now)
+    } else {
+        when.signed_duration_since(now) + chrono::Duration::hours(24)
+    };
+    duration.to_std().map_err(|_| "negative duration?!")
+}
 
-#[get("/mobilejt")]
-fn mobilejt() -> content::HTML<&'static str> {
-    content::HTML(include_str!("mobilejt.html"))
+#[post("/startgame", data = "<form>")]
+fn startgame<'a>(form: Form<'a, StartGameCommand<'a>>) -> Redirect
+{
+    let cmd = form.get();
+    let team1 = roster::get_team(cmd.hometeam, String::from("Home")).unwrap(); // XXX
+    let team2 = roster::get_team(cmd.awayteam, String::from("Away")).unwrap(); // XXX
+    let time = match cmd.timetype {
+        TimeType::TimeToDerby => Duration::new((cmd.ttd_hrs.unwrap_or_default() as u64) * 3600
+                                               + (cmd.ttd_mins.unwrap_or_default() as u64) * 60
+                                               + (cmd.ttd_secs.unwrap_or_default() as u64), 0),
+        TimeType::StartAt => start_at_time(cmd.at_hrs.unwrap_or_default(),
+                                           cmd.at_mins.unwrap_or_default(),
+                                           cmd.at_ampm).unwrap(),// XXX
+    };
+    gamestate::start_game(team1, team2, time);
+    Redirect::to("/")
 }
 
 #[get("/gameroster/<team>")]
-fn gameroster(team: Team) -> JSON<roster::Team> {
-    let guard = gamestate::get_game();
-    let game = guard.as_ref().unwrap();
+fn gameroster(game: Game, team: Team) -> JSON<roster::Team> {
     let skaters = game.roster(team);
     JSON(skaters.clone()) // ew. Why can't we serialize a ref?
 }
 
 fn main() {
-    let rosters = roster::load_rosters(OsStr::new("rosters")).unwrap_or(Vec::new());
-    println!("Loaded {} rosters", rosters.len());
-    gamestate::start_game(&rosters[0], &rosters[1]);
-    thread::spawn(move || {
-        loop {
-            thread::park_timeout(Duration::new(0, 100_000_000));
-            let mut guard = gamestate::get_game_mut();
-            guard.as_mut().unwrap().tick();
-        }
-    });
-
-    rocket::ignite().mount("/", routes![index,  gameroster,
-                                        penalties, penaltiesjs, get_penalties,
-                                        scoreboard, scoreboardjs,
-                                        mobilejt, mobilejtjs,
-                                        scoreupdate, post_score, add_penalty]).launch();
+    rocket::ignite().mount(
+        "/",
+        routes![staticpages::index,  gameroster, startgame,
+                staticpages::penalties, staticpages::penaltiesjs, get_penalties,
+                staticpages::scoreboard, staticpages::scoreboardjs,
+                staticpages::mobilejt, staticpages::mobilejtjs,
+                scoreupdate, post_score, add_penalty]
+    ).launch();
 }

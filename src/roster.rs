@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::io::BufRead;
 use std::fs::read_dir;
 use std::ffi::OsStr;
 use std::io;
+use std::path::Path;
 use derbyjson;
 use serde_json;
 
@@ -118,14 +120,39 @@ fn load_roster_json<R>(mut input: R) -> Result<Vec<Team>, derbyjson::Error>
         |(id, dj_team)| Team::from_derbyjson(dj_team)).collect())
 }
 
+fn load_one_roster(path: &Path) -> Option<Vec<Team>> {
+    match path.extension() {
+        Some(e) if e == "json" => {
+            let reader = ::std::fs::File::open(path).ok();
+            if let Some(r) = reader {
+                load_roster_json(r).ok()
+            } else { None }
+        },
+        Some(e) if e == "txt" => {
+            let file = ::std::fs::File::open(path).ok();
+            if let Some(f) = file {
+                let reader = io::BufReader::new(f);
+                Team::from_file(reader).ok().map(|x| vec!(x))
+            } else { None }
+        },
+        _ => None
+    }
+}
+
+pub fn get_team(name: &str, defname: String) -> io::Result<Team> {
+    if name == "" {
+        return Ok(Team { name: defname, skaters: vec!() });
+    }
+    unimplemented!();
+}
+
 pub fn load_rosters(rosterdir: &OsStr) -> io::Result<Vec<Team>> {
     let mut rosters = Vec::new();
     for entry in read_dir(rosterdir)? {
         let path = entry?.path();
-        let reader = io::BufReader::new(::std::fs::File::open(path)?);
-        let team = Team::from_file(reader)?;
-        println!("Loaded 1 roster");
-        rosters.push(team);
+        if let Some(mut r) = load_one_roster(path.as_path()) {
+            rosters.append(&mut r);
+        }
     }
     Ok(rosters)
 }
@@ -138,6 +165,13 @@ pub fn save_roster_json<W>(mut output: W, rosters: &[Team])
     let dj_root = derbyjson::Rosters::new(dj_teams.collect());
     serde_json::to_writer(&mut output, &dj_root)
 }
+
+pub fn list_rosters() -> HashMap<String, Team> {
+    return HashMap::new();
+
+}
+
+
 
 #[cfg(test)]
 mod tests {

@@ -11,4 +11,6 @@ serde = "^0.9"
 serde_json = "^0.9.8"
 serde_derive = "^0.9"
 lazy_static = "*"
+chrono = "*"
+handlebars = { version = "0.25.2", features = [ "serde_type" ] }
 derbyjson = "0.0.2"

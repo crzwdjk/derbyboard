@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <style>
+input#startat:checked ~ div#timetoderby {
+  display: none;
+}
+input#startat:checked ~ div#startatdiv {
+  display: block;
+}
+input#timeto:checked ~ div#timetoderby {
+  display: block;
+}
+input#timeto:checked ~ div#startatdiv {
+  display: none;
+}
+  </style>
+</head>
+<body>
+  {{#if game_in_progress}}
+  <h1>Game in progress</h1>
+  <h3>{{game.home}} vs. {{game.away}}</h3>
+  <ul>
+    <li><a href="/scoreboard">Main scoreboard</a>
+    <li><a href="/mobilejt">Jam Timer controls</a>
+    <li><a href="/scoresheet">Score sheet</a>
+    <li><a href="/penalties">Penalties</a>
+    <li><a href="/lineups">Lineups</a>
+    <li><a href="/editrosters">Edit rosters</a>
+    <li><button>Export DerbyJSON</button> <button>Export Statsbook</button>
+  </ul>
+  {{/if}}
+  <form action="startgame" method="POST">
+    <h3>Start game</h3>
+    <input type="radio" name="timetype" id="startat" value="1" checked>Start at
+    <input type="radio" name="timetype" id="timeto" value="2">Time to derby
+    <div id="timetoderby">
+      <input maxlength="2" name="ttd_hrs" class="time">:
+      <input maxlength="2" name="ttd_mins" class="time">:
+      <input maxlength="2" name="ttd_secs" class="time">
+    </div>
+    <div id="startatdiv">
+      <input maxlength="2" name="at_hrs" class="time">:
+      <input maxlength="2" name="at_mins" class="time">
+      <select name="at_ampm">
+	<option value="" selected></option>
+	<option value="AM">AM</option>
+	<option value="PM">PM</option>
+      </select>
+    </div>
+    Home team:
+    <select name="hometeam">
+      <option value="">No roster</option>
+      {{#each rosters}}
+        <option value="{{idx}}">{{name}}</option>
+      {{/each}}
+    </select>
+    <br>
+    Away team:
+    <select name="awayteam">
+      <option value="">No roster</option>
+      {{#each rosters}}
+        <option value="{{idx}}">{{name}}</option>
+      {{/each}}
+    </select>
+    <button type="submit">Start game</button>
+  </form>
+</html>

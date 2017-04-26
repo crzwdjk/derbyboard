@@ -46,12 +46,12 @@ pub struct Clock {
 /* tick is called on every tick. Also,
  * every command has an implicit tick. */
 impl Clock {
-    pub fn new() -> Clock {
+    pub fn new(ttd: Duration) -> Clock {
         Clock {
             gameclock: Duration::new(30*60, 0),
             period: 0,
             clocktype: Clocktype::Intermission,
-            activeclock: Duration::new(0, 0),
+            activeclock: ttd,
             lastupdate: Instant::now(),
         }
     }
