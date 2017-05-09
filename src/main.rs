@@ -19,15 +19,12 @@ use rocket::request::{FromFormValue,Form};
 use rocket::response::Redirect;
 
 mod gamestate;
-mod jamstate;
-mod clock;
 mod roster;
-mod penaltycodes;
 mod staticpages;
 mod guard;
 
 use gamestate::{Penalty, ActiveClock};
-use jamstate::Team;
+use gamestate::jamstate::Team;
 use guard::{Game, MutGame};
 
 #[derive(Deserialize)]
@@ -43,10 +40,8 @@ fn add_penalty(mut game: MutGame, team: Team, cmd: JSON<PenaltyCmd>) -> JSON<Has
 }
 
 #[get("/penalties/<team>")]
-fn get_penalties(team: Team) -> JSON<HashMap<String, Vec<Penalty>>>
+fn get_penalties(game: Game, team: Team) -> JSON<HashMap<String, Vec<Penalty>>>
 {
-    let guard = gamestate::get_game();
-    let game = guard.as_ref().unwrap();
     JSON(game.team_penalties(team))
 }
 
@@ -191,7 +186,7 @@ fn startgame<'a>(form: Form<'a, StartGameCommand<'a>>) -> Redirect
                                            cmd.at_mins.unwrap_or_default(),
                                            cmd.at_ampm).unwrap(),// XXX
     };
-    gamestate::start_game(team1, team2, time);
+    guard::start_game(team1, team2, time);
     Redirect::to("/")
 }
 

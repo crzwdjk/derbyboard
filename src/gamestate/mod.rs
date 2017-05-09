@@ -1,11 +1,14 @@
+mod clock;
+pub mod jamstate;
+mod penaltycodes;
+
+
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use penaltycodes::*;
-use jamstate::*;
+use self::penaltycodes::*;
+use self::jamstate::*;
 use roster;
-use clock;
-use std::thread;
 use std::time::*;
 use std::ops::{Index,IndexMut};
 
@@ -81,7 +84,7 @@ impl IndexMut<Team> for GameState {
 //  if lost, get OR lost, and set to 0.
 
 impl GameState {
-    fn new(roster1: roster::Team, roster2: roster::Team,
+    pub fn new(roster1: roster::Team, roster2: roster::Team,
            time_to_derby: Duration) -> GameState {
         let firstjam = JamState::default();
         let team1 = TeamState::new(roster1);
@@ -142,6 +145,9 @@ impl GameState {
                 if let ActiveTimeout::TeamTO(team) = self.tostate {
                     ActiveClock::team_timeout(team, duration)
                 } else { unreachable!() }
+            }
+            clock::Clocktype::None => {
+                ActiveClock::none
             }
         }
     }
@@ -285,29 +291,5 @@ impl GameState {
     pub fn cur_jam_mut(&mut self) -> &mut JamState {
         self.jams.last_mut().unwrap()
     }
- }
-
-pub fn start_game(team1: roster::Team, team2: roster::Team, time_to_derby: Duration) -> () {
-    *CUR_GAME.write().unwrap() = Some(GameState::new(team1, team2, time_to_derby));
-    thread::spawn(move || {
-        loop {
-            thread::park_timeout(Duration::new(0, 100_000_000));
-            let mut guard = get_game_mut();
-            guard.as_mut().unwrap().tick();
-        }
-    });
 }
 
-pub fn get_game<'a>() -> RwLockReadGuard<'a, Option<GameState>> {
-    CUR_GAME.read().unwrap()
-}
-
-pub fn get_game_mut<'a>() -> RwLockWriteGuard<'a, Option<GameState>> {
-    CUR_GAME.write().unwrap()
-}
-
-use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
-
-lazy_static! {
-    static ref CUR_GAME : RwLock<Option<GameState>> = RwLock::new(None);
-}

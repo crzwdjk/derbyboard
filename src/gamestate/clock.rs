@@ -1,4 +1,8 @@
-/* The derby clock state machine. */
+/*! The derby clock state machine. This handles the timing aspects of the
+    game clock as well as jams, lineup times, team timeouts, official timeouts,
+    and intermissions. This level does not care about which team is taking
+    a timeout or whether it's an OR or OTO.
+ */
 
 use std::time::{Instant, Duration};
 
@@ -9,6 +13,7 @@ pub enum Clocktype {
     TeamTimeout,
     OtherTimeout,
     Intermission,
+    None,
 }
 
 impl Clocktype {
@@ -17,6 +22,7 @@ impl Clocktype {
             Clocktype::Jam => Clocktype::Lineup,
             Clocktype::Lineup => Clocktype::Jam,
             Clocktype::TeamTimeout => Clocktype::OtherTimeout,
+            Clocktype::Intermission => Clocktype::None,
             _ => self,
         }
     }
@@ -138,7 +144,7 @@ impl Clock {
                 self.start_clock(Clocktype::TeamTimeout, None);
             },
             // can't start a team timeout 
-            Clocktype::Intermission | Clocktype::TeamTimeout => (),
+            Clocktype::Intermission | Clocktype::TeamTimeout | Clocktype::None => (),
         }
     }
 
@@ -149,7 +155,8 @@ impl Clock {
                 self.start_clock(Clocktype::OtherTimeout, None);
             },
             Clocktype::TeamTimeout => { /* convert to an other timeout */ },
-            Clocktype::Intermission | Clocktype::OtherTimeout =>  {
+            Clocktype::Intermission | Clocktype::OtherTimeout | Clocktype::None =>  {
+                
                 // can't start Other Timeout
             }
         }

@@ -1,4 +1,7 @@
-use penaltycodes::*;
+use std::cmp::max;
+use std::time::*;
+
+use super::penaltycodes::*;
 
 #[derive(Default)]
 pub struct TeamJamState {
@@ -8,6 +11,7 @@ pub struct TeamJamState {
     pub penalties: Vec<(usize, PenaltyType)>,
     starpass: bool,
     lead: bool,
+    lost: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
@@ -28,8 +32,6 @@ impl<'a> rocket::request::FromParam<'a> for Team {
         }
     }
 }
-use std::cmp::max;
-use std::time::*;
 
 impl TeamJamState {
     pub fn update_points(&mut self, adj: i8) {
@@ -42,6 +44,8 @@ impl TeamJamState {
         *p = max(*p as i8 + adj, 0) as u8;
     }
     pub fn pass_star(&mut self) { self.starpass = true }
+    pub fn set_lead(&mut self, yes: bool) { self.lead = yes }
+    pub fn set_lost(&mut self, yes: bool) { self.lost = yes; if self.lost { self.lead = false } }
 }
 
 

@@ -2,9 +2,9 @@ use rocket::response::content;
 use handlebars::Handlebars;
 use handlebars;
 
-use gamestate;
+use guard::get_game;
 use roster;
-use jamstate::Team;
+use gamestate::jamstate::Team;
 
 #[get("/score")]
 pub fn scoreboard() -> content::HTML<&'static str> {
@@ -46,7 +46,7 @@ struct HomepageState<'a> {
 #[get("/")]
 fn index() -> Result<content::HTML<String>, handlebars::RenderError> {
     let rosters = roster::list_rosters().into_iter().map(|(f, r)| (f, r.name));
-    let guard = gamestate::get_game();
+    let guard = get_game();
     let game = guard.as_ref();
     let gameinfo = game.map(|g| GameInfo { home: g.roster(Team::Home).name.as_str(),
                                            away: g.roster(Team::Away).name.as_str() });
