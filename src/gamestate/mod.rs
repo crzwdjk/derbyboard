@@ -291,5 +291,8 @@ impl GameState {
     pub fn cur_jam_mut(&mut self) -> &mut JamState {
         self.jams.last_mut().unwrap()
     }
+    pub fn get_jam(&self, i: usize) -> &JamState { &self.jams[i - 1] }
+    pub fn get_jam_mut(&mut self, i: usize) -> &mut JamState { &mut self.jams[i - 1] }
+    pub fn jams(&self) -> &[JamState] { self.jams.as_ref() }
 }
 

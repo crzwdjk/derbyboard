@@ -3,15 +3,16 @@ use std::time::*;
 
 use super::penaltycodes::*;
 
-#[derive(Default)]
+#[derive(Default,Serialize,Clone)]
 pub struct TeamJamState {
     lineup: [u32; 6],
-    pub points_j: Vec<u8>,
-    pub points_p: Vec<u8>,
+    jammerpoints: Vec<u8>,
+    pivotpoints: Vec<u8>,
     pub penalties: Vec<(usize, PenaltyType)>,
     starpass: bool,
     lead: bool,
     lost: bool,
+    call: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
@@ -35,16 +36,31 @@ impl<'a> rocket::request::FromParam<'a> for Team {
 
 impl TeamJamState {
     pub fn update_points(&mut self, adj: i8) {
-        let mut pointvec = if self.starpass { &mut self.points_p }
-                           else { &mut self.points_j };
+        let mut pointvec = if self.starpass { &mut self.pivotpoints }
+                           else { &mut self.jammerpoints };
         if let None = pointvec.last() {
             pointvec.push(0)
         }
         let mut p = pointvec.last_mut().unwrap();
         *p = max(*p as i8 + adj, 0) as u8;
     }
-    pub fn pass_star(&mut self) { self.starpass = true }
+    pub fn set_starpass(&mut self, yes: bool) {
+        self.starpass = yes;
+        if self.starpass && self.lead {
+            self.lead = false;
+            self.lost = true;
+        }
+    }
+    pub fn set_score(&mut self, trip: u8, points: u8) {
+        let idx = trip as usize;
+        let points = if !self.starpass {
+            &self.jammerpoints
+        } else {
+            &self.pivotpoints
+        };
+    }
     pub fn set_lead(&mut self, yes: bool) { self.lead = yes }
+    pub fn set_call(&mut self, yes: bool) { self.call = yes }
     pub fn set_lost(&mut self, yes: bool) { self.lost = yes; if self.lost { self.lead = false } }
 }
 
@@ -80,10 +96,10 @@ impl IndexMut<Team> for JamState {
 
 impl JamState {
     pub fn jam_score(&self) -> (u32, u32) {
-        let p1j = self.team1.points_j.iter().sum::<u8>();
-        let p1p = self.team1.points_p.iter().sum::<u8>();
-        let p2j = self.team2.points_j.iter().sum::<u8>();
-        let p2p = self.team2.points_p.iter().sum::<u8>();
+        let p1j = self.team1.jammerpoints.iter().sum::<u8>();
+        let p1p = self.team1.pivotpoints.iter().sum::<u8>();
+        let p2j = self.team2.jammerpoints.iter().sum::<u8>();
+        let p2p = self.team2.pivotpoints.iter().sum::<u8>();
         (p1j as u32 + p1p as u32, p2j as u32 + p2p as u32)
     }
     pub fn adj_score(&mut self, t1adj: i8, t2adj: i8) -> () {

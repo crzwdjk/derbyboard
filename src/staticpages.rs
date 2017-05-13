@@ -25,6 +25,15 @@ fn penaltiesjs() -> &'static str { include_str!("penalties.js") }
 #[get("/mobilejt.js")]
 fn mobilejtjs() -> &'static str { include_str!("mobilejt.js") }
 
+#[get("/scoresheet")]
+fn scoresheet() -> content::HTML<&'static str> {
+    content::HTML(include_str!("scoresheet.html"))
+}
+
+#[get("/scoresheet.js")]
+fn scoresheetjs() -> &'static str { include_str!("scoresheet.js") }
+
+
 #[get("/mobilejt")]
 fn mobilejt() -> content::HTML<&'static str> {
     content::HTML(include_str!("mobilejt.html"))

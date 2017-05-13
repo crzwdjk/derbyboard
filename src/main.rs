@@ -24,7 +24,7 @@ mod staticpages;
 mod guard;
 
 use gamestate::{Penalty, ActiveClock};
-use gamestate::jamstate::Team;
+use gamestate::jamstate::{Team,TeamJamState};
 use guard::{Game, MutGame};
 
 #[derive(Deserialize)]
@@ -102,7 +102,7 @@ fn post_score(mut game: MutGame, cmd: JSON<UpdateCommand>) -> &'static str
         UpdateCommand::team_timeout(team) => { game.team_timeout(team); },
         UpdateCommand::official_review(team) => { game.official_review(team); }
         UpdateCommand::star_pass(team) =>
-            game.cur_jam_mut()[team].pass_star(),
+            game.cur_jam_mut()[team].set_starpass(true),
         UpdateCommand::set_time(secs) =>
             game.set_time(Duration::new(secs as u64, 0)),
         UpdateCommand::review_lost(team) => game.review_lost(team),
@@ -110,6 +110,39 @@ fn post_score(mut game: MutGame, cmd: JSON<UpdateCommand>) -> &'static str
         UpdateCommand::review_retained(_) => (),
     }; 
     "success"
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum JamCommand {
+    Lead(bool),
+    Lost(bool),
+    Call(bool),
+    Starpass(bool),
+    ScoringTrip { trip: u8, points: u8 },
+}
+
+#[post("/jam/<jam>/<team>/command", format = "application/json", data = "<cmd>")]
+fn jam_command(mut game: MutGame, jam: usize, team: Team, cmd: JSON<JamCommand>) -> &'static str
+{
+    let ref mut teamjam = game.get_jam_mut(jam)[team];
+    match cmd.0 {
+        JamCommand::Lead(yesno) => teamjam.set_lead(yesno),
+        JamCommand::Call(yesno) => teamjam.set_call(yesno),
+        JamCommand::Lost(yesno) => teamjam.set_lost(yesno),
+        JamCommand::Starpass(yesno) => teamjam.set_starpass(yesno),
+        JamCommand::ScoringTrip { trip, points } => teamjam.set_score(trip, points),
+    };
+    "success"
+}
+
+#[get("/scoresheet/update")]
+fn get_scoresheet(game: Game) -> JSON<Vec<(TeamJamState, TeamJamState)>> {
+    let stuff = game.jams().iter().map(|jamstate| {
+        (jamstate[Team::Home].clone(), jamstate[Team::Away].clone())
+    }).collect::<Vec<_>>();
+
+    JSON(stuff)
 }
 
 enum TimeType { TimeToDerby, StartAt }
@@ -203,6 +236,8 @@ fn main() {
                 staticpages::penalties, staticpages::penaltiesjs, get_penalties,
                 staticpages::scoreboard, staticpages::scoreboardjs,
                 staticpages::mobilejt, staticpages::mobilejtjs,
+                staticpages::scoresheet, staticpages::scoresheetjs,
+                get_scoresheet, jam_command,
                 scoreupdate, post_score, add_penalty]
     ).launch();
 }

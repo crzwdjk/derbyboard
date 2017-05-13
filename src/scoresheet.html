@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: sans;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    table, tr, td {
+      border: 1px solid black;
+    }
+    th {
+      background: black;
+      color: white;
+      font-size: 0.7em;
+      font-weight: normal;
+      padding: 0.3em;
+    }
+    th .sideways {
+      writing-mode: vertical-lr;
+      width: 1.5em;
+      transform: rotate(180deg);
+    }
+    tr:focus {
+    background: red;
+    }
+    td:focus {
+      background: yellow !important;
+    }
+    /* #e9f6da (dark odd, light even)
+       #d3ecb5 (dark even, gametotal) */
+  </style>
+</head>
+<body>
+  <input type="radio" name="teams" id="show1"><span id="hometeamname">Home</span>
+  <input type="radio" name="teams" id="show2"><span id="awayteamname">Away</span>
+  <input type="radio" name="teams" id="showboth" checked>Both teams
+  <table id="Home_score" data-team="1">
+    <thead>
+      <tr>
+        <th>JAM</th>
+        <th>Jammer's<br>Number</th>
+        <th><div class="sideways">LOST</div></th>
+        <th><div class="sideways">LEAD</div></th>
+        <th><div class="sideways">CALL</div></th>
+        <th><div class="sideways">INJ</div></th>
+        <th><div class="sideways">NI</div></th>
+        <th>Trip 2</th>
+        <th>Trip 3</th>
+        <th>Trip 4</th>
+        <th>Trip 5</th>
+        <th>Trip 6</th>
+        <th>Trip 7</th>
+        <th>Trip 8</th>
+        <th>Trip 9</th>
+        <th>Trip 10</th>
+        <th>Jam Total</th>
+        <th>Game Total</th>
+      </tr>
+    </thead>
+    <tfoot>
+      <tr>
+        <td class="jamnum"></td>
+        <td style="font-size: 0.7em">PERIOD<br> TOTALS</td>
+        <td class="lost"></td>
+        <td class="lead"></td>
+        <td class="call"></td>
+        <td class="inj"></td>
+        <td class="nopass"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="jamtotal"></td>
+        <td class="gametotal"></td>
+      </tr>
+    </tfoot>
+  </table>
+  <table id="Away_score" data-team="2">
+    <thead>
+      <tr>
+        <th>JAM</th>
+        <th>Jammer's<br>Number</th>
+        <th><div class="sideways">LOST</div></th>
+        <th><div class="sideways">LEAD</div></th>
+        <th><div class="sideways">CALL</div></th>
+        <th><div class="sideways">INJ</div></th>
+        <th><div class="sideways">NI</div></th>
+        <th>Trip 2</th>
+        <th>Trip 3</th>
+        <th>Trip 4</th>
+        <th>Trip 5</th>
+        <th>Trip 6</th>
+        <th>Trip 7</th>
+        <th>Trip 8</th>
+        <th>Trip 9</th>
+        <th>Trip 10</th>
+        <th>Jam Total</th>
+        <th>Game Total</th>
+      </tr>
+    </thead>
+    <tfoot>
+      <tr>
+        <td class="jamnum"></td>
+        <td style="font-size: 0.7em">PERIOD<br> TOTALS</td>
+        <td class="lost"></td>
+        <td class="lead"></td>
+        <td class="call"></td>
+        <td class="inj"></td>
+        <td class="nopass"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="scoringtrip"></td>
+        <td class="jamtotal"></td>
+        <td class="gametotal"></td>
+      </tr>
+    </tfoot>
+  </table>
+  <template id="scoreline">
+    <tr>
+      <td class="jamnum"></td>
+      <td tabindex="2" class="jammer"></td>
+      <td tabindex="2" class="lost"></td>
+      <td tabindex="2" class="lead"></td>
+      <td tabindex="2" class="call"></td>
+      <td tabindex="2" class="inj"></td>
+      <td tabindex="2" class="ni"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="2"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="3"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="4"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="5"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="6"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="7"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="8"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="9"></td>
+      <td tabindex="2" class="scoringtrip" data-trip="10"></td>
+      <td tabindex="2" class="jamtotal"></td>
+      <td tabindex="2" class="gametotal"></td>
+    </tr>
+  </template>
+  <script src="scoresheet.js"></script>
+</body>
+</html>
