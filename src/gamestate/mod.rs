@@ -1,6 +1,7 @@
 mod clock;
 pub mod jamstate;
 mod penaltycodes;
+mod savestate;
 
 
 use std::collections::HashMap;
@@ -186,6 +187,9 @@ impl GameState {
                     }
                 },
                 clock::Clocktype::Jam | clock::Clocktype::Lineup => {},
+                clock::Clocktype::None => {
+                    self.tostate = ActiveTimeout::None;
+                }
                 _ => unreachable!()
             };
         }

@@ -75,7 +75,9 @@ impl Clock {
                    -> () {
         let mut amt = self.clock_start_amt(ty);
         if let Some(d) = decrement {
-            amt -= d;
+            if amt > d {
+                amt -= d;
+            }
         }
         self.clocktype = ty;
         self.activeclock = amt;
@@ -223,6 +225,4 @@ fn test_timeout_expires() {
     thread::sleep(Duration::new(1,0));
     clock.tick();
     assert!(clock.clocktype == Clocktype::OtherTimeout);
-
-
 }

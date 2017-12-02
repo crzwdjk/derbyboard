@@ -11,21 +11,24 @@ extern crate derbyjson;
 extern crate handlebars;
 extern crate chrono;
 
-use rocket_contrib::JSON;
+use rocket_contrib::Json;
 
 use std::collections::HashMap;
 use std::time::Duration;
-use rocket::request::{FromFormValue,Form};
+use rocket::request::Form;
 use rocket::response::Redirect;
+use rocket::http::RawStr;
 
 mod gamestate;
 mod roster;
 mod staticpages;
 mod guard;
+mod timetoderby;
 
 use gamestate::{Penalty, ActiveClock};
 use gamestate::jamstate::{Team,TeamJamState};
 use guard::{Game, MutGame};
+use timetoderby::*;
 
 #[derive(Deserialize)]
 struct PenaltyCmd {
@@ -34,15 +37,17 @@ struct PenaltyCmd {
 }
 
 #[post("/penalties/<team>", format = "application/json", data = "<cmd>")]
-fn add_penalty(mut game: MutGame, team: Team, cmd: JSON<PenaltyCmd>) -> JSON<HashMap<String, Vec<Penalty>>> {
+fn add_penalty(mut game: MutGame, team: Team, cmd: Json<PenaltyCmd>)
+               -> Json<HashMap<String, Vec<Penalty>>>
+{
     game.penalty(team, cmd.skater.as_str(), cmd.code);
-    JSON(game.team_penalties(team))
+    Json(game.team_penalties(team))
 }
 
 #[get("/penalties/<team>")]
-fn get_penalties(game: Game, team: Team) -> JSON<HashMap<String, Vec<Penalty>>>
+fn get_penalties(game: Game, team: Team) -> Json<HashMap<String, Vec<Penalty>>>
 {
-    JSON(game.team_penalties(team))
+    Json(game.team_penalties(team))
 }
 
 #[derive(Serialize)]
@@ -56,7 +61,7 @@ struct ScoreUpdate {
 }
 
 #[get("/score/update")]
-fn scoreupdate(game: Game) -> JSON<ScoreUpdate> {
+fn scoreupdate(game: Game) -> Json<ScoreUpdate> {
     let cur_jam = game.cur_jam();
     let jamscore = if cur_jam.starttime.is_some() {
         cur_jam.jam_score()
@@ -67,7 +72,7 @@ fn scoreupdate(game: Game) -> JSON<ScoreUpdate> {
         }
     };
 
-    JSON(ScoreUpdate {
+    Json(ScoreUpdate {
         score: game.total_score(), jamscore: jamscore,
         gameclock: game.get_time(), activeclock: game.get_active_clock(),
         reviews: game.reviews(), timeouts: game.timeouts(),
@@ -91,7 +96,7 @@ enum UpdateCommand {
 }
 
 #[post("/score/update", format = "application/json", data = "<cmd>")]
-fn post_score(mut game: MutGame, cmd: JSON<UpdateCommand>) -> &'static str
+fn post_score(mut game: MutGame, cmd: Json<UpdateCommand>) -> &'static str
 {
     match cmd.0 {
         UpdateCommand::score_adj(a1, a2) =>
@@ -123,7 +128,7 @@ enum JamCommand {
 }
 
 #[post("/jam/<jam>/<team>/command", format = "application/json", data = "<cmd>")]
-fn jam_command(mut game: MutGame, jam: usize, team: Team, cmd: JSON<JamCommand>) -> &'static str
+fn jam_command(mut game: MutGame, jam: usize, team: Team, cmd: Json<JamCommand>) -> &'static str
 {
     let ref mut teamjam = game.get_jam_mut(jam)[team];
     match cmd.0 {
@@ -137,44 +142,18 @@ fn jam_command(mut game: MutGame, jam: usize, team: Team, cmd: JSON<JamCommand>)
 }
 
 #[get("/scoresheet/update")]
-fn get_scoresheet(game: Game) -> JSON<Vec<(TeamJamState, TeamJamState)>> {
+fn get_scoresheet(game: Game) -> Json<Vec<(TeamJamState, TeamJamState)>> {
     let stuff = game.jams().iter().map(|jamstate| {
         (jamstate[Team::Home].clone(), jamstate[Team::Away].clone())
     }).collect::<Vec<_>>();
 
-    JSON(stuff)
-}
-
-enum TimeType { TimeToDerby, StartAt }
-impl<'a> FromFormValue<'a> for TimeType {
-    type Error = &'a str;
-    fn from_form_value(v: &'a str) -> Result<Self, Self::Error> {
-        match v {
-            "1" => Ok(TimeType::StartAt),
-            "2" => Ok(TimeType::TimeToDerby),
-            _ => Err(v),
-        }
-    }
-}
-
-#[derive(Clone,Copy)]
-enum TimeAMPM { AM, PM, None }
-impl<'a> FromFormValue<'a> for TimeAMPM {
-    type Error = &'a str;
-    fn from_form_value(v: &'a str) -> Result<Self, Self::Error> {
-        match v {
-            "AM" => Ok(TimeAMPM::AM),
-            "PM" => Ok(TimeAMPM::PM),
-            "" => Ok(TimeAMPM::None),
-            _ => Err(v),
-        }
-    }
+    Json(stuff)
 }
 
 #[derive(FromForm)]
 struct StartGameCommand<'a> {
-    hometeam: &'a str,
-    awayteam: &'a str,
+    hometeam: &'a RawStr,
+    awayteam: &'a RawStr,
     timetype: TimeType,
     at_hrs: Option<u8>,
     at_mins: Option<u8>,
@@ -182,27 +161,6 @@ struct StartGameCommand<'a> {
     ttd_hrs: Option<u8>,
     ttd_mins: Option<u8>,
     ttd_secs: Option<u8>,
-}
-
-fn start_at_time(at_hrs: u8, at_mins: u8, at_ampm: TimeAMPM) -> Result<Duration, &'static str> {
-    if at_hrs >= 24 { return Err("Bad hours") }
-    if at_mins >= 60 { return Err("Bad minutes") }
-    let real_hrs = match at_ampm {
-        TimeAMPM::None => at_hrs,
-        TimeAMPM::AM if at_hrs < 12 => at_hrs,
-        TimeAMPM::AM if at_hrs == 12 => 0,
-        TimeAMPM::PM if at_hrs < 12 => at_hrs + 12,
-        TimeAMPM::PM if at_hrs >= 12 => 12,
-        _ => return Err("Bad hours"),
-    };
-    let now = chrono::Local::now().time();
-    let when = chrono::naive::time::NaiveTime::from_hms(real_hrs as u32, at_mins as u32, 0);
-    let duration = if now < when {
-        when.signed_duration_since(now)
-    } else {
-        when.signed_duration_since(now) + chrono::Duration::hours(24)
-    };
-    duration.to_std().map_err(|_| "negative duration?!")
 }
 
 #[post("/startgame", data = "<form>")]
@@ -224,9 +182,9 @@ fn startgame<'a>(form: Form<'a, StartGameCommand<'a>>) -> Redirect
 }
 
 #[get("/gameroster/<team>")]
-fn gameroster(game: Game, team: Team) -> JSON<roster::Team> {
+fn gameroster(game: Game, team: Team) -> Json<roster::Team> {
     let skaters = game.roster(team);
-    JSON(skaters.clone()) // ew. Why can't we serialize a ref?
+    Json(skaters.clone()) // ew. Why can't we serialize a ref?
 }
 
 fn main() {

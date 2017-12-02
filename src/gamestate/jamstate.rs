@@ -1,5 +1,6 @@
 use std::cmp::max;
 use std::time::*;
+use rocket::http::RawStr;
 
 use super::penaltycodes::*;
 
@@ -25,10 +26,10 @@ use rocket;
 impl<'a> rocket::request::FromParam<'a> for Team {
     type Error = &'static str;
 
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        match param {
-            "1" => Ok(Team::Home),
-            "2" => Ok(Team::Away),
+    fn from_param(param: &'a RawStr) -> Result<Self, Self::Error> {
+        match param.as_bytes() {
+            b"1" => Ok(Team::Home),
+            b"2" => Ok(Team::Away),
             _ => Err("Team must be 1 or 2"),
         }
     }
